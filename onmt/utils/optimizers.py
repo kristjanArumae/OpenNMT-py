@@ -85,19 +85,19 @@ def build_torch_optimizer(model, opt):
     else:
         raise ValueError('Invalid optimizer type: ' + opt.optim)
 
-    if opt.model_dtype == 'fp16':
-        import apex
-        static_loss_scale = opt.loss_scale
-        dynamic_loss_scale = opt.loss_scale == 0
-        # TODO: clean this up when APEX unify its optimizer API.
-        if opt.optim.startswith('fused'):
-            namespace = apex.optimizers  # Faster wrapper.
-        else:
-            namespace = apex.fp16_utils
-        optimizer = namespace.FP16_Optimizer(
-            optimizer,
-            static_loss_scale=static_loss_scale,
-            dynamic_loss_scale=dynamic_loss_scale)
+    # if opt.model_dtype == 'fp16':
+    #     import apex
+    #     static_loss_scale = opt.loss_scale
+    #     dynamic_loss_scale = opt.loss_scale == 0
+    #     # TODO: clean this up when APEX unify its optimizer API.
+    #     if opt.optim.startswith('fused'):
+    #         namespace = apex.optimizers  # Faster wrapper.
+    #     else:
+    #         namespace = apex.fp16_utils
+    #     optimizer = namespace.FP16_Optimizer(
+    #         optimizer,
+    #         static_loss_scale=static_loss_scale,
+    #         dynamic_loss_scale=dynamic_loss_scale)
     return optimizer
 
 
@@ -119,12 +119,12 @@ def make_learning_rate_decay_fn(opt):
     elif opt.decay_method == 'rsqrt':
         return functools.partial(
             rsqrt_decay, warmup_steps=opt.warmup_steps)
-    elif opt.start_decay_steps is not None:
+    else:
         return functools.partial(
             exponential_decay,
             rate=opt.learning_rate_decay,
-            decay_steps=opt.decay_steps,
-            start_step=opt.start_decay_steps)
+            decay_steps=10000,
+            start_step=50000)
 
 
 def noam_decay(step, warmup_steps, model_size):

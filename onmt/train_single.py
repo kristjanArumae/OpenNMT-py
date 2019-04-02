@@ -14,6 +14,7 @@ from onmt.models import build_model_saver
 from onmt.utils.logging import init_logger, logger
 from onmt.utils.parse import ArgumentParser
 
+import json
 
 def _check_save_model_path(opt):
     save_model_path = os.path.abspath(opt.save_model)
@@ -61,6 +62,15 @@ def main(opt, device_id):
         checkpoint = None
         model_opt = opt
         vocab = torch.load(opt.data + '.vocab.pt')
+
+    ofp_v = open('vocab.json', 'w+')
+    vocab_map = dict()
+
+    for i in xrange(len(vocab[0][1].itos)):
+        vocab_map[i] = vocab[0][1].itos[i]
+
+    json.dump(vocab_map, ofp_v)
+    ofp_v.close()
 
     # check for code where vocab is saved instead of fields
     # (in the future this will be done in a smarter way)
@@ -114,7 +124,7 @@ def main(opt, device_id):
         train_iter,
         train_steps,
         save_checkpoint_steps=opt.save_checkpoint_steps,
-        valid_iter=valid_iter,
+        valid_iter=None,
         valid_steps=opt.valid_steps)
 
     if opt.tensorboard:

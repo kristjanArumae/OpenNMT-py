@@ -12,6 +12,7 @@
 from copy import deepcopy
 import itertools
 import torch
+import codecs
 
 import onmt.utils
 from onmt.utils.logging import logger
@@ -97,7 +98,7 @@ class Trainer(object):
                  accum_steps=[0],
                  n_gpu=1, gpu_rank=1,
                  gpu_verbose_level=0, report_manager=None, model_saver=None,
-                 average_decay=0, average_every=1, model_dtype='fp32'):
+                 average_decay=0, average_every=1, model_dtype='fp32', output_file='stanford_attn.out'):
         # Basic attributes.
         self.model = model
         self.train_loss = train_loss
@@ -118,6 +119,7 @@ class Trainer(object):
         self.moving_average = None
         self.average_every = average_every
         self.model_dtype = model_dtype
+        self.out_file = codecs.open(output_file, 'w+', 'utf-8')
 
         for i in range(len(self.accum_count_l)):
             assert self.accum_count_l[i] > 0
@@ -208,56 +210,19 @@ class Trainer(object):
                 self._accum_batches(train_iter)):
             step = self.optim.training_step
 
-            if self.gpu_verbose_level > 1:
-                logger.info("GpuRank %d: index: %d", self.gpu_rank, i)
-            if self.gpu_verbose_level > 0:
-                logger.info("GpuRank %d: reduce_counter: %d \
-                            n_minibatch %d"
-                            % (self.gpu_rank, i + 1, len(batches)))
-
-            if self.n_gpu > 1:
-                normalization = sum(onmt.utils.distributed
-                                    .all_gather_list
-                                    (normalization))
-
             self._gradient_accumulation(
-                batches, normalization, total_stats,
+                batches,
                 report_stats)
-
-            if self.average_decay > 0 and i % self.average_every == 0:
-                self._update_average(step)
-
-            report_stats = self._maybe_report_training(
-                step, train_steps,
-                self.optim.learning_rate(),
-                report_stats)
-
-            if valid_iter is not None and step % valid_steps == 0:
-                if self.gpu_verbose_level > 0:
-                    logger.info('GpuRank %d: validate step %d'
-                                % (self.gpu_rank, step))
-                valid_stats = self.validate(
-                    valid_iter, moving_average=self.moving_average)
-                if self.gpu_verbose_level > 0:
-                    logger.info('GpuRank %d: gather valid stat \
-                                step %d' % (self.gpu_rank, step))
-                valid_stats = self._maybe_gather_stats(valid_stats)
-                if self.gpu_verbose_level > 0:
-                    logger.info('GpuRank %d: report stat step %d'
-                                % (self.gpu_rank, step))
-                self._report_step(self.optim.learning_rate(),
-                                  step, valid_stats=valid_stats)
 
             if (self.model_saver is not None
                 and (save_checkpoint_steps != 0
                      and step % save_checkpoint_steps == 0)):
                 self.model_saver.save(step, moving_average=self.moving_average)
 
-            if train_steps > 0 and step >= train_steps:
-                break
+            # if train_steps > 0 and step >= train_steps:
+            #     print 'here'
+            #     break
 
-        if self.model_saver is not None:
-            self.model_saver.save(step, moving_average=self.moving_average)
         return total_stats
 
     def validate(self, valid_iter, moving_average=None):
@@ -303,8 +268,7 @@ class Trainer(object):
 
         return stats
 
-    def _gradient_accumulation(self, true_batches, normalization, total_stats,
-                               report_stats):
+    def _gradient_accumulation(self, true_batches, report_stats):
         if self.accum_count > 1:
             self.optim.zero_grad()
 
@@ -334,50 +298,39 @@ class Trainer(object):
                 outputs, attns = self.model(src, tgt, src_lengths, bptt=bptt)
                 bptt = True
 
-                # 3. Compute loss.
-                loss, batch_stats = self.train_loss(
-                    batch,
-                    outputs,
-                    attns,
-                    normalization=normalization,
-                    shard_size=self.shard_size,
-                    trunc_start=j,
-                    trunc_size=trunc_size)
+                src_t = src.squeeze().t()
+                tgt_t = tgt.squeeze().t()
+                src_ls = src_t.cpu().numpy().tolist()
+                tgt_ls = tgt_t.cpu().numpy().tolist()
 
-                if loss is not None:
-                    self.optim.backward(loss)
+                att_ls = torch.transpose(attns['std'], 1, 0).detach().numpy().tolist()
 
-                total_stats.update(batch_stats)
-                report_stats.update(batch_stats)
+                for s, t, a in zip(src_ls, tgt_ls, att_ls):
 
-                # 4. Update the parameters and statistics.
-                if self.accum_count == 1:
-                    # Multi GPU gradient gather
-                    if self.n_gpu > 1:
-                        grads = [p.grad.data for p in self.model.parameters()
-                                 if p.requires_grad
-                                 and p.grad is not None]
-                        onmt.utils.distributed.all_reduce_and_rescale_tensors(
-                            grads, float(1))
-                    self.optim.step()
+                    self.out_file.write(str(s).strip('[]').replace(',', ' ') + '\n')
+                    self.out_file.write(str(t).strip('[]').replace(',', ' ') + '\n')
+                    for sub_a in a:
+                        self.out_file.write(str(sub_a).strip('[]').replace(',', ' ') + ' xx ')
+                    self.out_file.write('\n\n')
+                    self.out_file.flush()
 
                 # If truncated, don't backprop fully.
                 # TO CHECK
                 # if dec_state is not None:
                 #    dec_state.detach()
-                if self.model.decoder.state is not None:
-                    self.model.decoder.detach_state()
+                # if self.model.decoder.state is not None:
+                #     self.model.decoder.detach_state()
 
         # in case of multi step gradient accumulation,
         # update only after accum batches
-        if self.accum_count > 1:
-            if self.n_gpu > 1:
-                grads = [p.grad.data for p in self.model.parameters()
-                         if p.requires_grad
-                         and p.grad is not None]
-                onmt.utils.distributed.all_reduce_and_rescale_tensors(
-                    grads, float(1))
-            self.optim.step()
+        # if self.accum_count > 1:
+        #     if self.n_gpu > 1:
+        #         grads = [p.grad.data for p in self.model.parameters()
+        #                  if p.requires_grad
+        #                  and p.grad is not None]
+        #         onmt.utils.distributed.all_reduce_and_rescale_tensors(
+        #             grads, float(1))
+        #     self.optim.step()
 
     def _start_report_manager(self, start_time=None):
         """
