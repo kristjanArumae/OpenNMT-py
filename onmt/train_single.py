@@ -122,8 +122,6 @@ def main(opt, device_id):
         train_steps = 0
     trainer.train(
         train_iter,
-        train_steps,
-        save_checkpoint_steps=opt.save_checkpoint_steps,
         valid_iter=None,
         valid_steps=opt.valid_steps)
 

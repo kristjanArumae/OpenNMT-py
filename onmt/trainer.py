@@ -13,6 +13,7 @@ from copy import deepcopy
 import itertools
 import torch
 import codecs
+import numpy as np
 
 import onmt.utils
 from onmt.utils.logging import logger
@@ -98,7 +99,7 @@ class Trainer(object):
                  accum_steps=[0],
                  n_gpu=1, gpu_rank=1,
                  gpu_verbose_level=0, report_manager=None, model_saver=None,
-                 average_decay=0, average_every=1, model_dtype='fp32', output_file='stanford_attn.out'):
+                 average_decay=0, average_every=1, model_dtype='fp32', output_file='stanford_attn'):
         # Basic attributes.
         self.model = model
         self.train_loss = train_loss
@@ -119,7 +120,9 @@ class Trainer(object):
         self.moving_average = None
         self.average_every = average_every
         self.model_dtype = model_dtype
-        self.out_file = codecs.open(output_file, 'w+', 'utf-8')
+        self.out_file = output_file
+        self.out_ls = []
+        self.out_cnt = 0
 
         for i in range(len(self.accum_count_l)):
             assert self.accum_count_l[i] > 0
@@ -173,8 +176,6 @@ class Trainer(object):
 
     def train(self,
               train_iter,
-              train_steps,
-              save_checkpoint_steps=5000,
               valid_iter=None,
               valid_steps=10000):
         """
@@ -208,20 +209,24 @@ class Trainer(object):
 
         for i, (batches, normalization) in enumerate(
                 self._accum_batches(train_iter)):
-            step = self.optim.training_step
+
+            if i % (65536 / 16) == 0 and i > 0:
+                logger.info('SAVING OUTPUT')
+
+                with open(self.out_file + str(self.out_cnt), 'w+') as ofp:
+                    np.save(ofp, self.out_ls)
+
+                self.out_ls = []
+                self.out_cnt += 1
 
             self._gradient_accumulation(
                 batches,
                 report_stats)
+            logger.info(i)
 
-            if (self.model_saver is not None
-                and (save_checkpoint_steps != 0
-                     and step % save_checkpoint_steps == 0)):
-                self.model_saver.save(step, moving_average=self.moving_average)
-
-            # if train_steps > 0 and step >= train_steps:
-            #     print 'here'
-            #     break
+        if len(self.out_ls) > 0:
+            with open(self.out_file + str(self.out_cnt), 'w+') as ofp:
+                np.save(ofp, self.out_ls)
 
         return total_stats
 
@@ -300,20 +305,21 @@ class Trainer(object):
 
                 src_t = src.squeeze().t()
                 tgt_t = tgt.squeeze().t()
-                src_ls = src_t.cpu().numpy().tolist()
-                tgt_ls = tgt_t.cpu().numpy().tolist()
+                src_ls = src_t.cpu().numpy()
+                tgt_ls = tgt_t.cpu().numpy()
 
-                att_ls = torch.transpose(attns['std'], 1, 0).detach().numpy().tolist()
+                att_ls = torch.transpose(attns['std'], 1, 0).detach().cpu().numpy()
 
                 for s, t, a in zip(src_ls, tgt_ls, att_ls):
-
-                    self.out_file.write(str(s).strip('[]').replace(',', ' ') + '\n')
-                    self.out_file.write(str(t).strip('[]').replace(',', ' ') + '\n')
+                    sample = [s, t, []]
+                    # self.out_file.write(str(s).strip('[]').replace(',', ' ') + '\n')
+                    # self.out_file.write(str(t).strip('[]').replace(',', ' ') + '\n')
                     for sub_a in a:
-                        self.out_file.write(str(sub_a).strip('[]').replace(',', ' ') + ' xx ')
-                    self.out_file.write('\n\n')
-                    self.out_file.flush()
-
+                        sample[2].append(sub_a)
+                        # self.out_file.write(str(sub_a).strip('[]').replace(',', ' ') + ' xx ')
+                    # self.out_file.write('\n\n')
+                    # self.out_file.flush()
+                    self.out_ls.append(sample)
                 # If truncated, don't backprop fully.
                 # TO CHECK
                 # if dec_state is not None:
