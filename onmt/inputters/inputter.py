@@ -514,7 +514,7 @@ class OrderedIterator(torchtext.data.Iterator):
                         self.batch_size,
                         batch_size_fn=self.batch_size_fn,
                         batch_size_multiple=self.batch_size_multiple)
-                    for b in random_shuffler(list(p_batch)):
+                    for b in list(p_batch):
                         yield b
 
             self.batches = _pool(self.data(), self.random_shuffler)
@@ -565,7 +565,7 @@ class DatasetLazyIter(object):
             batch_size_multiple=self.batch_size_multiple,
             batch_size_fn=self.batch_size_fn,
             device=self.device,
-            train=self.is_train,
+            train=False,
             sort=False,
             sort_within_batch=True,
             repeat=False

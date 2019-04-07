@@ -4,7 +4,7 @@ import numpy as np
 import io
 
 
-def create_heatmap2():
+def create_labels():
     ifp_v = open('vocab.json', 'rb')
 
     vocab_map = json.load(ifp_v)
@@ -203,4 +203,4 @@ def combine_chunks(highlight_ls):
     return highlight_ls, longest_span
 
 
-create_heatmap2()
+create_labels()

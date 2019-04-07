@@ -210,7 +210,7 @@ class Trainer(object):
         for i, (batches, normalization) in enumerate(
                 self._accum_batches(train_iter)):
 
-            if i % (65536 / 16) == 0 and i > 0:
+            if i % (128 / 16) == 0 and i > 0:
                 logger.info('SAVING OUTPUT')
 
                 with open(self.out_file + str(self.out_cnt), 'w+') as ofp:
@@ -225,6 +225,7 @@ class Trainer(object):
             logger.info(i)
 
         if len(self.out_ls) > 0:
+            logger.info('SAVING OUTPUT')
             with open(self.out_file + str(self.out_cnt), 'w+') as ofp:
                 np.save(ofp, self.out_ls)
 
@@ -276,7 +277,8 @@ class Trainer(object):
     def _gradient_accumulation(self, true_batches, report_stats):
         if self.accum_count > 1:
             self.optim.zero_grad()
-
+        begin_idx = 0
+        end_idx = 16
         for batch in true_batches:
             target_size = batch.tgt.size(0)
             # Truncated BPTT: reminder not compatible with accum > 1
@@ -307,36 +309,16 @@ class Trainer(object):
                 tgt_t = tgt.squeeze().t()
                 src_ls = src_t.cpu().numpy()
                 tgt_ls = tgt_t.cpu().numpy()
-
+                batch_idx = batch.indices.cpu().numpy()
                 att_ls = torch.transpose(attns['std'], 1, 0).detach().cpu().numpy()
 
-                for s, t, a in zip(src_ls, tgt_ls, att_ls):
-                    sample = [s, t, []]
-                    # self.out_file.write(str(s).strip('[]').replace(',', ' ') + '\n')
-                    # self.out_file.write(str(t).strip('[]').replace(',', ' ') + '\n')
+                for s, t, a, b in zip(src_ls, tgt_ls, att_ls, batch_idx):
+                    sample = [s, t, [], b]
+
                     for sub_a in a:
                         sample[2].append(sub_a)
-                        # self.out_file.write(str(sub_a).strip('[]').replace(',', ' ') + ' xx ')
-                    # self.out_file.write('\n\n')
-                    # self.out_file.flush()
-                    self.out_ls.append(sample)
-                # If truncated, don't backprop fully.
-                # TO CHECK
-                # if dec_state is not None:
-                #    dec_state.detach()
-                # if self.model.decoder.state is not None:
-                #     self.model.decoder.detach_state()
 
-        # in case of multi step gradient accumulation,
-        # update only after accum batches
-        # if self.accum_count > 1:
-        #     if self.n_gpu > 1:
-        #         grads = [p.grad.data for p in self.model.parameters()
-        #                  if p.requires_grad
-        #                  and p.grad is not None]
-        #         onmt.utils.distributed.all_reduce_and_rescale_tensors(
-        #             grads, float(1))
-        #     self.optim.step()
+                    self.out_ls.append(sample)
 
     def _start_report_manager(self, start_time=None):
         """
