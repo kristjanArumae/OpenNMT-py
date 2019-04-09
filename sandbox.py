@@ -113,7 +113,7 @@ def create_iterator(max_len=30):
         all_segment_ids, dtype=torch.long), torch.tensor(all_start_positions, dtype=torch.long), torch.tensor(
         all_end_positions, dtype=torch.long), torch.tensor(all_sent_labels, dtype=torch.long))
 
-    return DataLoader(tensor_data, sampler=RandomSampler(tensor_data), batch_size=16), len(y_ls)
+    return DataLoader(tensor_data, sampler=RandomSampler(tensor_data), batch_size=32), len(y_ls)
 
 
 config = BertConfig(vocab_size_or_config_json_file=32000, hidden_size=768,
