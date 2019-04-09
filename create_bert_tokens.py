@@ -52,14 +52,13 @@ def tokenize_data(max_len=30):
             updated_labels_ls.append(labels)
         sent_tokenized_ls.append([sent_tokenized_as_idx, sent_tokenized_as_tok])
 
-        if i > 10:
-            break
-
     ofp = open('data.nosync/train/cnndm_labeled_tokenized.json', 'w+')
 
     updated_data = dict()
     updated_data['x'] = sent_tokenized_ls
     updated_data['y'] = updated_labels_ls
+
+    print(len(updated_labels_ls))
 
     json.dump(updated_data, ofp)
 
