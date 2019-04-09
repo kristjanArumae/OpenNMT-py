@@ -8,6 +8,8 @@ from pytorch_pretrained_bert.modeling import BertPreTrainedModel
 
 from tqdm import tqdm, trange
 
+import matplotlib.pyplot as plt
+
 
 class CustomNetwork(BertPreTrainedModel):
     def __init__(self, config, num_labels=2):
@@ -151,4 +153,5 @@ for _ in trange(num_train_epochs, desc="Epoch"):
             optimizer.step()
             optimizer.zero_grad()
 
-print(loss_ls)
+plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-', ls='dashed', linewidth=2.5)
+plt.savefig('ranges2.png', dpi = 400)
