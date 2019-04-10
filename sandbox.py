@@ -33,13 +33,13 @@ class CustomNetwork(BertPreTrainedModel):
         pooled_output = self.dropout_s(pooled_output)
         sequence_output = self.dropout_qa(sequence_output)
 
-        logits = self.classifier(pooled_output).clamp(min=1e-4, max=1 - 1e-4)
+        logits = self.classifier(pooled_output)
 
         logits_qa = self.qa_outputs(sequence_output)
         start_logits, end_logits = logits_qa.split(1, dim=-1)
 
-        start_logits = start_logits.squeeze(-1).clamp(min=1e-4, max=1 - 1e-4)
-        end_logits = end_logits.squeeze(-1).clamp(min=1e-4, max=1 - 1e-4)
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
 
         if start_positions is not None and end_positions is not None:
 
