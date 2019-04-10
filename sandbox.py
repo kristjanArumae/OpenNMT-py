@@ -27,7 +27,7 @@ class CustomNetwork(BertPreTrainedModel):
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
         self.apply(self.init_bert_weights)
 
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, start_positions=None, end_positions=None):
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, start_positions=None, end_positions=None, weights=None):
         sequence_output, pooled_output = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
 
         pooled_output = self.dropout_s(pooled_output)
@@ -54,7 +54,7 @@ class CustomNetwork(BertPreTrainedModel):
             end_positions.clamp_(0, ignored_index)
 
             loss_fct_qa = nn.CrossEntropyLoss(ignore_index=ignored_index)
-            loss_fct_sent = nn.CrossEntropyLoss()
+            loss_fct_sent = nn.CrossEntropyLoss(weight=weights)
 
             loss_sent = loss_fct_sent(logits.view(-1, self.num_labels), labels.view(-1))
 
@@ -153,13 +153,15 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
     loss_ls, loss_ls_s, loss_ls_qa = [], [], []
     best_loss = 100.0
 
+    weights = torch.tensor([0.1, 1.0], dtype=torch.float64).to(device)
+
     for _ in trange(num_train_epochs, desc="Epoch"):
         for step, batch in enumerate(tqdm(loader_train, desc="Iteration")):
 
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, start_positions, end_position, sent_labels = batch
 
-            loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position)
+            loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
 
             loss.backward()
 
@@ -178,7 +180,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
                 batch_valid = tuple(t2.to(device) for t2 in batch_valid)
 
                 input_ids, input_mask, start_positions, end_position, sent_labels = batch_valid
-                loss_, _, _ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position)
+                loss_, _, _ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
 
                 if loss_valid is None:
                     loss_valid = loss_
@@ -194,6 +196,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
                 plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '.-', label="sent", ls='dashed', linewidth=1)
                 plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '.-', label="qa", ls='dashed', linewidth=1)
 
+                plt.legend(loc='best')
                 plt.savefig('ranges2.png', dpi=400)
 
                 break
