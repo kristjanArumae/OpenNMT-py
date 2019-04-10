@@ -46,7 +46,7 @@ class CustomNetwork(BertPreTrainedModel):
             start_positions.clamp_(0, ignored_index)
             end_positions.clamp_(0, ignored_index)
 
-            loss_fct_qa = nn.CrossEntropyLoss(ignore_index=-1)
+            loss_fct_qa = nn.CrossEntropyLoss(ignore_index=ignored_index)
             loss_fct_sent = nn.CrossEntropyLoss()
 
             loss_sent = loss_fct_sent(logits.view(-1, self.num_labels), labels.view(-1))
@@ -80,13 +80,13 @@ def create_iterator(max_len=30):
 
     for (x, _), (label, start, end) in zip(x_ls, y_ls):
 
-        if start >= max_len:
+        if start >= max_len or label == 0:
             label = 0
-            start = -1
-            end = -1
+            start = 30
+            end = 30
 
-        if end >= max_len:
-            end = max_len - 1
+        if end > max_len:
+            end = 30
 
         all_sent_labels.append(label)
 
@@ -119,7 +119,7 @@ def create_iterator(max_len=30):
 config = BertConfig(vocab_size_or_config_json_file=32000, hidden_size=768,
        num_hidden_layers=12, num_attention_heads=12, intermediate_size=3072)
 
-num_train_epochs = 100
+num_train_epochs = 10
 loader, num_examples = create_iterator()
 print('loaded data')
 
@@ -141,20 +141,20 @@ optimizer_grouped_parameters = [
 optimizer = BertAdam(optimizer_grouped_parameters, lr=5e-05, warmup=0.1, t_total=num_train_optimization_steps)
 
 model.train()
-# loss_ls = []
+loss_ls = []
 for _ in trange(num_train_epochs, desc="Epoch"):
     for step, batch in enumerate(tqdm(loader, desc="Iteration")):
         batch = tuple(t.to(device) for t in batch)
         input_ids, input_mask, segment_ids, start_positions, end_position, sent_labels = batch
-        loss = model(input_ids, segment_ids, input_mask, sent_labels, start_positions, end_position)
+        loss = model(input_ids, None, input_mask, sent_labels, start_positions, end_position)
 
         loss.backward()
 
-        print(float(loss.cpu().data.numpy()))
+        loss_ls.append(float(loss.cpu().data.numpy()))
 
         if (step + 1) % 1 == 0:
             optimizer.step()
             optimizer.zero_grad()
 
-# plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-', ls='dashed', linewidth=2.5)
-# plt.savefig('ranges2.png', dpi = 400)
+plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-', ls='dashed', linewidth=2.5)
+plt.savefig('ranges2.png', dpi = 400)
