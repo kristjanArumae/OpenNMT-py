@@ -19,8 +19,8 @@ class CustomNetwork(BertPreTrainedModel):
 
         self.bert = BertModel(config)
 
-        self.dropout_qa = nn.Dropout(0.25)
-        self.dropout_s = nn.Dropout(0.25)
+        self.dropout_qa = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout_s = nn.Dropout(config.hidden_dropout_prob)
 
         self.classifier = nn.Linear(config.hidden_size, num_labels)
 
@@ -33,12 +33,13 @@ class CustomNetwork(BertPreTrainedModel):
         pooled_output = self.dropout_s(pooled_output)
         sequence_output = self.dropout_qa(sequence_output)
 
-        logits = self.classifier(pooled_output)
+        logits = self.classifier(pooled_output).clamp(min=1e-4, max=1 - 1e-4)
 
         logits_qa = self.qa_outputs(sequence_output)
         start_logits, end_logits = logits_qa.split(1, dim=-1)
-        start_logits = start_logits.squeeze(-1)
-        end_logits = end_logits.squeeze(-1)
+
+        start_logits = start_logits.squeeze(-1).clamp(min=1e-4, max=1 - 1e-4)
+        end_logits = end_logits.squeeze(-1).clamp(min=1e-4, max=1 - 1e-4)
 
         if start_positions is not None and end_positions is not None:
 
@@ -46,7 +47,9 @@ class CustomNetwork(BertPreTrainedModel):
                 start_positions = start_positions.squeeze(-1)
             if len(end_positions.size()) > 1:
                 end_positions = end_positions.squeeze(-1)
+
             ignored_index = start_logits.size(1)
+
             start_positions.clamp_(0, ignored_index)
             end_positions.clamp_(0, ignored_index)
 
