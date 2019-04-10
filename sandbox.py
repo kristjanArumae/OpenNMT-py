@@ -144,7 +144,7 @@ model.train()
 loss_ls = []
 for _ in trange(num_train_epochs, desc="Epoch"):
     for step, batch in enumerate(tqdm(loader, desc="Iteration")):
-
+        batch = tuple(t.to(device) for t in batch)
         input_ids, input_mask, segment_ids, start_positions, end_position, sent_labels = batch
         loss = model(input_ids, segment_ids, input_mask, sent_labels, start_positions, end_position)
 
