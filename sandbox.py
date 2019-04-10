@@ -65,7 +65,7 @@ class CustomNetwork(BertPreTrainedModel):
 
             total_loss = loss_qa + loss_sent
 
-            return total_loss
+            return total_loss, loss_sent, loss_qa
         else:
             return start_logits, end_logits, logits
 
@@ -147,21 +147,25 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
 
-    optimizer = BertAdam(optimizer_grouped_parameters, lr=1e-06, warmup=0.1, t_total=num_train_optimization_steps)
+    optimizer = BertAdam(optimizer_grouped_parameters, lr=1e-05, warmup=0.1, t_total=num_train_optimization_steps)
 
     model.train()
-    loss_ls = []
+    loss_ls, loss_ls_s, loss_ls_qa = [], [], []
     best_loss = 100.0
 
     for _ in trange(num_train_epochs, desc="Epoch"):
         for step, batch in enumerate(tqdm(loader_train, desc="Iteration")):
+
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, start_positions, end_position, sent_labels = batch
-            loss = model(input_ids, None, input_mask, sent_labels, start_positions, end_position)
+
+            loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position)
 
             loss.backward()
 
             loss_ls.append(float(loss.cpu().data.numpy()))
+            loss_ls_s.append(float(loss_s.cpu().data.numpy()))
+            loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
 
             if (step + 1) % 1 == 0:
                 optimizer.step()
@@ -169,11 +173,12 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
 
         with torch.no_grad():
             loss_valid = None
+
             for _, batch_valid in enumerate(tqdm(loader_valid, desc="Validation")):
                 batch_valid = tuple(t2.to(device) for t2 in batch_valid)
 
                 input_ids, input_mask, start_positions, end_position, sent_labels = batch_valid
-                loss_ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position)
+                loss_, _, _ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position)
 
                 if loss_valid is None:
                     loss_valid = loss_
@@ -185,7 +190,10 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
             if loss_valid < best_loss:
                 best_loss = loss_valid
             else:
-                plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-', ls='dashed', linewidth=1)
+                plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-',  label="loss", ls='dashed', linewidth=1)
+                plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '.-', label="sent", ls='dashed', linewidth=1)
+                plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '.-', label="qa", ls='dashed', linewidth=1)
+
                 plt.savefig('ranges2.png', dpi=400)
 
                 break
