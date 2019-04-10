@@ -126,6 +126,7 @@ print('loaded data')
 model = CustomNetwork.from_pretrained('bert-base-uncased')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
 num_train_optimization_steps = int(num_examples / 32)
 
 no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
