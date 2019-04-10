@@ -140,7 +140,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
 
-    optimizer = BertAdam(optimizer_grouped_parameters, lr=5e-05, warmup=0.1, t_total=num_train_optimization_steps)
+    optimizer = BertAdam(optimizer_grouped_parameters, lr=5e-06, warmup=0.1, t_total=num_train_optimization_steps)
 
     model.train()
     loss_ls = []
