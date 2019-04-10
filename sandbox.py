@@ -3,7 +3,7 @@ from torch import nn
 import json
 from torch.utils.data import DataLoader, RandomSampler, TensorDataset
 
-from pytorch_pretrained_bert import BertModel, BertAdam, BertConfig
+from pytorch_pretrained_bert import BertModel, BertAdam
 from pytorch_pretrained_bert.modeling import BertPreTrainedModel
 
 from tqdm import tqdm, trange
@@ -153,7 +153,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
     loss_ls, loss_ls_s, loss_ls_qa = [], [], []
     best_loss = 100.0
 
-    weights = torch.tensor([0.1, 1.0], dtype=torch.float32).to(device)
+    weights = torch.tensor([0.01, 1.0], dtype=torch.float32).to(device)
 
     for _ in trange(num_train_epochs, desc="Epoch"):
         for step, batch in enumerate(tqdm(loader_train, desc="Iteration")):
