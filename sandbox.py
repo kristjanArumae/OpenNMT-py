@@ -147,7 +147,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
 
-    optimizer = BertAdam(optimizer_grouped_parameters, lr=1e-05, warmup=0.1, t_total=num_train_optimization_steps)
+    optimizer = BertAdam(optimizer_grouped_parameters, lr=1e-06, warmup=0.1, t_total=num_train_optimization_steps)
 
     model.train()
     loss_ls, loss_ls_s, loss_ls_qa = [], [], []
@@ -193,18 +193,18 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
             if loss_valid < best_loss:
                 best_loss = loss_valid
             else:
-                plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-',  label="loss", ls='dashed', linewidth=1)
-                plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '.-', label="sent", ls='dashed', linewidth=1)
-                plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '.-', label="qa", ls='dashed', linewidth=1)
+                plt.plot([i for i in range(len(loss_ls))], loss_ls, '-',  label="loss", linewidth=1)
+                plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
+                plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
 
                 plt.legend(loc='best')
                 plt.savefig('ranges2.png', dpi=400)
 
                 break
 
-    plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-', label="loss", ls='dashed', linewidth=1)
-    plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '.-', label="sent", ls='dashed', linewidth=1)
-    plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '.-', label="qa", ls='dashed', linewidth=1)
+    plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
+    plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
+    plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
 
     plt.legend(loc='best')
     plt.savefig('ranges2.png', dpi=400)
