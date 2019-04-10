@@ -141,7 +141,7 @@ optimizer_grouped_parameters = [
 optimizer = BertAdam(optimizer_grouped_parameters, lr=5e-05, warmup=0.1, t_total=num_train_optimization_steps)
 
 model.train()
-loss_ls = []
+# loss_ls = []
 for _ in trange(num_train_epochs, desc="Epoch"):
     for step, batch in enumerate(tqdm(loader, desc="Iteration")):
         batch = tuple(t.to(device) for t in batch)
@@ -149,10 +149,12 @@ for _ in trange(num_train_epochs, desc="Epoch"):
         loss = model(input_ids, segment_ids, input_mask, sent_labels, start_positions, end_position)
 
         loss.backward()
-        loss_ls.append(float(loss.cpu().data.numpy()))
+
+        print(float(loss.cpu().data.numpy()))
+
         if (step + 1) % 1 == 0:
             optimizer.step()
             optimizer.zero_grad()
 
-plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-', ls='dashed', linewidth=2.5)
-plt.savefig('ranges2.png', dpi = 400)
+# plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-', ls='dashed', linewidth=2.5)
+# plt.savefig('ranges2.png', dpi = 400)
