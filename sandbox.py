@@ -78,6 +78,8 @@ def create_iterator(max_len=30):
     all_end_positions = []
     all_sent_labels = []
 
+    val_split = len(y_ls)//10
+
     for (x, _), (label, start, end) in zip(x_ls, y_ls):
 
         if start >= max_len or label == 0:
@@ -86,7 +88,7 @@ def create_iterator(max_len=30):
             end = 30
 
         if end > max_len:
-            end = 30
+            end = 29
 
         all_sent_labels.append(label)
 
@@ -109,52 +111,84 @@ def create_iterator(max_len=30):
 
         all_segment_ids.append(segment_id[:max_len])
 
-    tensor_data = TensorDataset(torch.tensor(all_input_ids, dtype=torch.long), torch.tensor(all_input_mask, dtype=torch.long), torch.tensor(
-        all_segment_ids, dtype=torch.long), torch.tensor(all_start_positions, dtype=torch.long), torch.tensor(
-        all_end_positions, dtype=torch.long), torch.tensor(all_sent_labels, dtype=torch.long))
+    tensor_data_train = TensorDataset(torch.tensor(all_input_ids[val_split:], dtype=torch.long),
+                                      torch.tensor(all_input_mask[val_split:], dtype=torch.long),
+                                      torch.tensor(all_start_positions[val_split:], dtype=torch.long),
+                                      torch.tensor(all_end_positions[val_split:], dtype=torch.long),
+                                      torch.tensor(all_sent_labels[val_split:], dtype=torch.long))
 
-    return DataLoader(tensor_data, sampler=RandomSampler(tensor_data), batch_size=32), len(y_ls)
+    tensor_data_valid = TensorDataset(torch.tensor(all_input_ids[:val_split], dtype=torch.long),
+                                      torch.tensor(all_input_mask[:val_split], dtype=torch.long),
+                                      torch.tensor(all_start_positions[:val_split], dtype=torch.long),
+                                      torch.tensor(all_end_positions[:val_split], dtype=torch.long),
+                                      torch.tensor(all_sent_labels[:val_split], dtype=torch.long))
+
+    return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=32),  DataLoader(tensor_data_valid, batch_size=32), len(y_ls)
 
 
-config = BertConfig(vocab_size_or_config_json_file=32000, hidden_size=768,
-       num_hidden_layers=12, num_attention_heads=12, intermediate_size=3072)
+def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    num_train_optimization_steps = int(num_examples / 32)
 
-num_train_epochs = 10
-loader, num_examples = create_iterator()
-print('loaded data')
+    no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
 
-model = CustomNetwork.from_pretrained('bert-base-uncased')
+    param_optimizer = list(model.named_parameters())
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
-num_train_optimization_steps = int(num_examples / 32)
-
-no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
-
-param_optimizer = list(model.named_parameters())
-
-optimizer_grouped_parameters = [
+    optimizer_grouped_parameters = [
         {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
 
-optimizer = BertAdam(optimizer_grouped_parameters, lr=5e-05, warmup=0.1, t_total=num_train_optimization_steps)
+    optimizer = BertAdam(optimizer_grouped_parameters, lr=5e-05, warmup=0.1, t_total=num_train_optimization_steps)
 
-model.train()
-loss_ls = []
-for _ in trange(num_train_epochs, desc="Epoch"):
-    for step, batch in enumerate(tqdm(loader, desc="Iteration")):
-        batch = tuple(t.to(device) for t in batch)
-        input_ids, input_mask, segment_ids, start_positions, end_position, sent_labels = batch
-        loss = model(input_ids, None, input_mask, sent_labels, start_positions, end_position)
+    model.train()
+    loss_ls = []
+    best_loss = 100.0
 
-        loss.backward()
+    for _ in trange(num_train_epochs, desc="Epoch"):
+        for step, batch in enumerate(tqdm(loader_train, desc="Iteration")):
+            batch = tuple(t.to(device) for t in batch)
+            input_ids, input_mask, start_positions, end_position, sent_labels = batch
+            loss = model(input_ids, None, input_mask, sent_labels, start_positions, end_position)
 
-        loss_ls.append(float(loss.cpu().data.numpy()))
+            loss.backward()
 
-        if (step + 1) % 1 == 0:
-            optimizer.step()
-            optimizer.zero_grad()
+            loss_ls.append(float(loss.cpu().data.numpy()))
 
-plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-', ls='dashed', linewidth=2.5)
-plt.savefig('ranges2.png', dpi = 400)
+            if (step + 1) % 1 == 0:
+                optimizer.step()
+                optimizer.zero_grad()
+
+            if (step + 1) % 5 == 0:
+                with torch.no_grad():
+                    loss_valid = None
+                    for _, batch_valid in enumerate(tqdm(loader_valid, desc="Validation")):
+                        batch_valid = tuple(t2.to(device) for t2 in batch_valid)
+
+                        input_ids, input_mask, start_positions, end_position, sent_labels = batch_valid
+                        loss_ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position)
+
+                        if loss_valid is None:
+                            loss_valid = loss_
+                        else:
+                            loss_valid += loss_
+
+                    loss_valid = float(loss_valid.cpu().data.numpy())
+
+                    if loss_valid < best_loss:
+                        best_loss = loss_valid
+                    else:
+                        plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-', ls='dashed', linewidth=2.5)
+                        plt.savefig('ranges2.png', dpi=400)
+
+                        return
+
+loader_train_, loader_valid_, n = create_iterator()
+print('loaded data')
+
+train(CustomNetwork.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, n)
+
+
+
+
