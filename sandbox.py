@@ -153,7 +153,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
     loss_ls, loss_ls_s, loss_ls_qa = [], [], []
     best_loss = 100.0
 
-    weights = torch.tensor([0.1, 1.0], dtype=torch.float64).to(device)
+    weights = torch.tensor([0.1, 1.0], dtype=torch.float32).to(device)
 
     for _ in trange(num_train_epochs, desc="Epoch"):
         for step, batch in enumerate(tqdm(loader_train, desc="Iteration")):
@@ -174,6 +174,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
                 optimizer.zero_grad()
 
         with torch.no_grad():
+            continue
             loss_valid = None
 
             for _, batch_valid in enumerate(tqdm(loader_valid, desc="Validation")):
@@ -200,6 +201,13 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
                 plt.savefig('ranges2.png', dpi=400)
 
                 break
+
+    plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-', label="loss", ls='dashed', linewidth=1)
+    plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '.-', label="sent", ls='dashed', linewidth=1)
+    plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '.-', label="qa", ls='dashed', linewidth=1)
+
+    plt.legend(loc='best')
+    plt.savefig('ranges2.png', dpi=400)
 
 loader_train_, loader_valid_, n = create_iterator()
 print('loaded data')
