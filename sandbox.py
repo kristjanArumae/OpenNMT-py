@@ -54,7 +54,7 @@ class CustomNetwork(BertPreTrainedModel):
             start_loss = loss_fct_qa(start_logits, start_positions)
             end_loss = loss_fct_qa(end_logits, end_positions)
 
-            loss_qa = (start_loss + end_loss) / 2
+            loss_qa = (start_loss + end_loss) / 10
 
             total_loss = loss_qa + loss_sent
 
