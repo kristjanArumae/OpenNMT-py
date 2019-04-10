@@ -149,7 +149,7 @@ for _ in trange(num_train_epochs, desc="Epoch"):
         loss = model(input_ids, segment_ids, input_mask, sent_labels, start_positions, end_position)
 
         loss.backward()
-        loss_ls.append(float(loss.data.numpy()))
+        loss_ls.append(float(loss.cpu().data.numpy()))
         if (step + 1) % 1 == 0:
             optimizer.step()
             optimizer.zero_grad()
