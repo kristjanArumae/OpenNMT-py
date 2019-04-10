@@ -19,7 +19,9 @@ class CustomNetwork(BertPreTrainedModel):
 
         self.bert = BertModel(config)
 
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout_qa = nn.Dropout(0.25)
+        self.dropout_s = nn.Dropout(0.25)
+
         self.classifier = nn.Linear(config.hidden_size, num_labels)
 
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
@@ -28,7 +30,9 @@ class CustomNetwork(BertPreTrainedModel):
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, start_positions=None, end_positions=None):
         sequence_output, pooled_output = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
 
-        pooled_output = self.dropout(pooled_output)
+        pooled_output = self.dropout_s(pooled_output)
+        sequence_output = self.dropout_qa(sequence_output)
+
         logits = self.classifier(pooled_output)
 
         logits_qa = self.qa_outputs(sequence_output)
@@ -140,7 +144,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
 
-    optimizer = BertAdam(optimizer_grouped_parameters, lr=5e-06, warmup=0.1, t_total=num_train_optimization_steps)
+    optimizer = BertAdam(optimizer_grouped_parameters, lr=1e-06, warmup=0.1, t_total=num_train_optimization_steps)
 
     model.train()
     loss_ls = []
@@ -178,7 +182,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
             if loss_valid < best_loss:
                 best_loss = loss_valid
             else:
-                plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-', ls='dashed', linewidth=2.5)
+                plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-', ls='dashed', linewidth=1)
                 plt.savefig('ranges2.png', dpi=400)
 
                 break
