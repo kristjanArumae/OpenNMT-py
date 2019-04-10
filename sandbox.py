@@ -160,29 +160,28 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
                 optimizer.step()
                 optimizer.zero_grad()
 
-            if (step + 1) % 5 == 0:
-                with torch.no_grad():
-                    loss_valid = None
-                    for _, batch_valid in enumerate(tqdm(loader_valid, desc="Validation")):
-                        batch_valid = tuple(t2.to(device) for t2 in batch_valid)
+        with torch.no_grad():
+            loss_valid = None
+            for _, batch_valid in enumerate(tqdm(loader_valid, desc="Validation")):
+                batch_valid = tuple(t2.to(device) for t2 in batch_valid)
 
-                        input_ids, input_mask, start_positions, end_position, sent_labels = batch_valid
-                        loss_ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position)
+                input_ids, input_mask, start_positions, end_position, sent_labels = batch_valid
+                loss_ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position)
 
-                        if loss_valid is None:
-                            loss_valid = loss_
-                        else:
-                            loss_valid += loss_
+                if loss_valid is None:
+                    loss_valid = loss_
+                else:
+                    loss_valid += loss_
 
-                    loss_valid = float(loss_valid.cpu().data.numpy())
+            loss_valid = float(loss_valid.cpu().data.numpy())
 
-                    if loss_valid < best_loss:
-                        best_loss = loss_valid
-                    else:
-                        plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-', ls='dashed', linewidth=2.5)
-                        plt.savefig('ranges2.png', dpi=400)
+            if loss_valid < best_loss:
+                best_loss = loss_valid
+            else:
+                plt.plot([i for i in range(len(loss_ls))], loss_ls, '.-', ls='dashed', linewidth=2.5)
+                plt.savefig('ranges2.png', dpi=400)
 
-                        return
+                break
 
 loader_train_, loader_valid_, n = create_iterator()
 print('loaded data')
