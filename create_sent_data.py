@@ -95,7 +95,7 @@ def create_labels(data_split='valid'):
         most_used_idxs_map = get_most_used(a_ls, y_ls)
         doc = ' '.join(x_ls_r)
 
-        sentences = sent_tokenize(doc.encode('utf-8'))
+        sentences = sent_tokenize(doc.decode('utf8'))
         sentences_orig = sent_tokenize(x_o)
         token_idx = 0
 
