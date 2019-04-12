@@ -2,7 +2,7 @@ from pyrouge import Rouge155
 import tempfile
 
 
-def run_rouge(data_split='valid', by=True, s='system_sent'):
+def run_rouge(data_split='valid', by=False, s='system_sent'):
     tempfile.tempdir = '/scratch/'
 
     rouge_fname = 'data.nosync/' + data_split + '/model/'
