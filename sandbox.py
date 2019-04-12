@@ -70,6 +70,68 @@ class CustomNetwork(BertPreTrainedModel):
             return start_logits, end_logits, logits
 
 
+class CustomNetworkQA(BertPreTrainedModel):
+    def __init__(self, config, num_labels=2):
+        super(CustomNetworkQA, self).__init__(config)
+
+        self.num_labels = num_labels
+
+        self.bert = BertModel(config)
+
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
+        self.apply(self.init_bert_weights)
+
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, start_positions=None, end_positions=None, weights=None):
+        sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
+        logits = self.qa_outputs(sequence_output)
+        start_logits, end_logits = logits.split(1, dim=-1)
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
+
+        if start_positions is not None and end_positions is not None:
+            # If we are on multi-GPU, split add a dimension
+            if len(start_positions.size()) > 1:
+                start_positions = start_positions.squeeze(-1)
+            if len(end_positions.size()) > 1:
+                end_positions = end_positions.squeeze(-1)
+            # sometimes the start/end positions are outside our model inputs, we ignore these terms
+            ignored_index = start_logits.size(1)
+            start_positions.clamp_(0, ignored_index)
+            end_positions.clamp_(0, ignored_index)
+
+            loss_fct = nn.CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
+            total_loss = (start_loss + end_loss) / 2
+            return total_loss
+        else:
+            return start_logits, end_logits
+
+
+class CustomNetworkSent(BertPreTrainedModel):
+    def __init__(self, config, num_labels=2):
+        super(CustomNetworkSent, self).__init__(config)
+        self.num_labels = num_labels
+
+        self.bert = BertModel(config)
+
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.classifier = nn.Linear(config.hidden_size, num_labels)
+        self.apply(self.init_bert_weights)
+
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, start_positions=None, end_positions=None, weights=None):
+        _, pooled_output = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+
+        if labels is not None:
+            loss_fct = nn.CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            return loss
+        else:
+            return logits
+
+
 def create_iterator(max_len=30):
     ifp = open('data.nosync/train/cnndm_labeled_tokenized.json', 'rb')
     data = json.load(ifp)
@@ -161,13 +223,13 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, start_positions, end_position, sent_labels = batch
 
-            loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
+            loss = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
 
             loss.backward()
 
             loss_ls.append(float(loss.cpu().data.numpy()))
-            loss_ls_s.append(float(loss_s.cpu().data.numpy()))
-            loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
+            # loss_ls_s.append(float(loss_s.cpu().data.numpy()))
+            # loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
 
             if (step + 1) % 1 == 0:
                 optimizer.step()
@@ -203,16 +265,16 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
                 break
 
     plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
-    plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
-    plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
-
-    plt.legend(loc='best')
+    # plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
+    # plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
+    #
+    # plt.legend(loc='best')
     plt.savefig('ranges2.png', dpi=400)
 
 loader_train_, loader_valid_, n = create_iterator()
 print('loaded data')
 
-train(CustomNetwork.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, n)
+train(CustomNetworkSent.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, n)
 
 
 
