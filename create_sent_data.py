@@ -97,11 +97,13 @@ def create_labels(data_split='valid'):
         ofp_sys_sent = open(output_path_system_sent + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
         ofp_sys_segm = open(output_path_system_segm + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
 
-        ofp_mod.write(y_o.encode('utf-8'))
+        ofp_mod.write(y_o.encode('utf-8').replace('<t>', '').replace('</t>', ''))
         ofp_mod.close()
 
         sentences_orig = sent_tokenize(x_o)
         token_idx = 0
+
+        num_used = 0
 
         for sent, sent_o in zip(sentences, sentences_orig):
             total_in_sent = 0
@@ -135,6 +137,8 @@ def create_labels(data_split='valid'):
                 ofp_sys_segm.write(' '.join(s_split_orig[longest_span[0]:longest_span[1]]).encode('utf-8') + ' ')
 
                 num_pos += 1
+
+                num_used += 1
             else:
                 single_y.extend([-1, -1])
 
@@ -144,9 +148,13 @@ def create_labels(data_split='valid'):
 
             len_ls.append(len(data['x'][-1].split()))
 
+        if num_used == 0:
+            print rouge_counter
+
         rouge_counter += 1
         ofp_sys_segm.close()
         ofp_sys_sent.close()
+
 
     json.dump(data, ofp_json)
     ofp_json.close()
