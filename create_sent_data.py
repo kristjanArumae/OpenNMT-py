@@ -81,6 +81,7 @@ def create_labels(data_split='valid'):
     tgt_list = reverse_batch(tgt_list, batch_idx)
 
     rouge_counter = 0
+    total_unused = 0
 
     for a_ls, x_ls,  x_ls_r, x_o, y_o, y_ls in zip(attn_list, src_list, src_list_raw, x_orig, y_orig, tgt_list):
         assert len(x_ls) == len(x_ls_r)
@@ -149,6 +150,7 @@ def create_labels(data_split='valid'):
             len_ls.append(len(data['x'][-1].split()))
 
         if num_used == 0:
+            total_unused += 1
             print rouge_counter
 
         rouge_counter += 1
@@ -159,7 +161,7 @@ def create_labels(data_split='valid'):
     json.dump(data, ofp_json)
     ofp_json.close()
 
-    print num_pos/float(len(data['y'])), len(data['y']), len(data['x'])
+    print num_pos/float(len(data['y'])), len(data['y']), len(data['x']), total_unused
     print np.median(len_ls), np.mean(len_ls)
 
 
