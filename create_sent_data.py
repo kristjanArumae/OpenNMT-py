@@ -17,9 +17,9 @@ def create_labels(data_split='valid'):
     len_ls = []
     batch_idx = []
 
-    output_path_model = 'data.nosync/' + data_split + '/model/d_'
-    output_path_system_sent = 'data.nosync/' + data_split + '/system_sent/sum.'
-    output_path_system_segm = 'data.nosync/' + data_split + '/system_segm/sum.'
+    output_path_model = 'data.nosync/' + data_split + '/model/'
+    output_path_system_sent = 'data.nosync/' + data_split + '/system_sent/'
+    output_path_system_segm = 'data.nosync/' + data_split + '/system_segm/'
 
     if not os.path.exists(output_path_model):
         os.mkdir(output_path_model)
@@ -85,9 +85,9 @@ def create_labels(data_split='valid'):
     for a_ls, x_ls,  x_ls_r, x_o, y_o, y_ls in zip(attn_list, src_list, src_list_raw, x_orig, y_orig, tgt_list):
         assert len(x_ls) == len(x_ls_r)
 
-        ofp_mod = open(output_path_model + str(rouge_counter).zfill(6) + '.txt', 'w+')
-        ofp_sys_sent = open(output_path_system_sent + str(rouge_counter).zfill(6) + '.txt', 'w+')
-        ofp_sys_segm = open(output_path_system_segm + str(rouge_counter).zfill(6) + '.txt', 'w+')
+        ofp_mod = open(output_path_model + 'd_' + str(rouge_counter).zfill(6) + '.txt', 'w+')
+        ofp_sys_sent = open(output_path_system_sent + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
+        ofp_sys_segm = open(output_path_system_segm + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
 
         ofp_mod.write(y_o.encode('utf-8'))
         ofp_mod.close()
