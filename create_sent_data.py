@@ -17,9 +17,9 @@ def create_labels(data_split='valid'):
     len_ls = []
     batch_idx = []
 
-    output_path_model = 'data.nosync/' + data_split + '/model/'
-    output_path_system_sent = 'data.nosync/' + data_split + '/system_sent/'
-    output_path_system_segm = 'data.nosync/' + data_split + '/system_segm/'
+    output_path_model = 'data.nosync/' + data_split + '/model/d_'
+    output_path_system_sent = 'data.nosync/' + data_split + '/system_sent/sum.'
+    output_path_system_segm = 'data.nosync/' + data_split + '/system_segm/sum.'
 
     if not os.path.exists(output_path_model):
         os.mkdir(output_path_model)
