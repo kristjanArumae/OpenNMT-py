@@ -5,7 +5,7 @@ import io
 import os
 
 
-def create_labels(data_split='train'):
+def create_labels(data_split='valid'):
     ifp_v = open('vocab.json', 'rb')
 
     vocab_map = json.load(ifp_v)
