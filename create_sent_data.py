@@ -30,7 +30,7 @@ def create_labels(data_split='valid'):
 
     num_pos = 0
 
-    ofp_json = open('data.nosync/train/cnndm.json', 'w+')
+    ofp_json = open('data.nosync/valid/cnndm.json', 'w+')
     data = {'x': [], 'x_o': [], 'y': []}
 
     for i in xrange(2):
