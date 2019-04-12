@@ -33,7 +33,7 @@ def create_labels(data_split='valid'):
     ofp_json = open('data.nosync/valid/cnndm.json', 'w+')
     data = {'x': [], 'x_o': [], 'y': []}
 
-    for i in xrange(2):
+    for i in xrange(1):
         ifp_model = open('stanford_attn' + str(i), 'rb')
         ifp_data = np.load(ifp_model)
 
