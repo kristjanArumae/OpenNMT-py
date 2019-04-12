@@ -85,6 +85,14 @@ def create_labels(data_split='valid'):
     for a_ls, x_ls,  x_ls_r, x_o, y_o, y_ls in zip(attn_list, src_list, src_list_raw, x_orig, y_orig, tgt_list):
         assert len(x_ls) == len(x_ls_r)
 
+        most_used_idxs_map = get_most_used(a_ls, y_ls)
+        doc = ' '.join(x_ls_r)
+
+        try:
+            sentences = sent_tokenize(doc.encode('utf-8'))
+        except UnicodeDecodeError:
+            continue
+
         ofp_mod = open(output_path_model + 'd_' + str(rouge_counter).zfill(6) + '.txt', 'w+')
         ofp_sys_sent = open(output_path_system_sent + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
         ofp_sys_segm = open(output_path_system_segm + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
@@ -92,10 +100,6 @@ def create_labels(data_split='valid'):
         ofp_mod.write(y_o.encode('utf-8'))
         ofp_mod.close()
 
-        most_used_idxs_map = get_most_used(a_ls, y_ls)
-        doc = ' '.join(x_ls_r)
-
-        sentences = sent_tokenize(doc.decode('utf8'))
         sentences_orig = sent_tokenize(x_o)
         token_idx = 0
 
