@@ -12,8 +12,8 @@ def run_rouge(data_split='valid', by=False, s='system_sent'):
     else:
         r = Rouge155()
 
-    r.system_dir = rouge_fname
-    r.model_dir = 'data.nosync/' + data_split + '/' + s + '/'
+    r.model_dir = rouge_fname
+    r.system_dir = 'data.nosync/' + data_split + '/' + s + '/'
 
     r.system_filename_pattern = 'sum.(\d+).txt'
     r.model_filename_pattern = 'd_#ID#.txt'
