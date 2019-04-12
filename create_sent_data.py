@@ -2,9 +2,10 @@ import json
 from nltk.tokenize import sent_tokenize
 import numpy as np
 import io
+import os
 
 
-def create_labels():
+def create_labels(data_split='train'):
     ifp_v = open('vocab.json', 'rb')
 
     vocab_map = json.load(ifp_v)
@@ -15,6 +16,17 @@ def create_labels():
     src_list_raw = []
     len_ls = []
     batch_idx = []
+
+    output_path_model = 'data.nosync/' + data_split + '/model/'
+    output_path_system_sent = 'data.nosync/' + data_split + '/system_sent/'
+    output_path_system_segm = 'data.nosync/' + data_split + '/system_segm/'
+
+    if not os.path.exists(output_path_model):
+        os.mkdir(output_path_model)
+    if not os.path.exists(output_path_system_sent):
+        os.mkdir(output_path_system_sent)
+    if not os.path.exists(output_path_system_segm):
+        os.mkdir(output_path_system_segm)
 
     num_pos = 0
 
@@ -41,16 +53,25 @@ def create_labels():
 
         ifp_model.close()
 
-    # ifp_orig = open('data.nosync/train.txt.src', 'rb')
+    ifp_hl = io.open("data.nosync/train.txt.tgt", mode="r", encoding="utf-8")
     ifp_orig = io.open("data.nosync/train.txt.src", mode="r", encoding="utf-8")
+
     x_orig, y_orig = [], []
+
     for i, line_x in enumerate(ifp_orig):
 
         if i > len(src_list) - 1:
             break
         x_orig.append(line_x.rstrip())
 
+    for i, line_y in enumerate(ifp_hl):
+
+        if i > len(src_list) - 1:
+            break
+        y_orig.append(line_y.rstrip())
+
     ifp_orig.close()
+    ifp_hl.close()
 
     print len(tgt_list), len(src_list)
 
@@ -59,8 +80,17 @@ def create_labels():
     src_list = reverse_batch(src_list, batch_idx)
     tgt_list = reverse_batch(tgt_list, batch_idx)
 
-    for a_ls, x_ls,  x_ls_r, x_o, y_ls in zip(attn_list, src_list, src_list_raw, x_orig, tgt_list):
+    rouge_counter = 0
+
+    for a_ls, x_ls,  x_ls_r, x_o, y_o, y_ls in zip(attn_list, src_list, src_list_raw, x_orig, y_orig, tgt_list):
         assert len(x_ls) == len(x_ls_r)
+
+        ofp_mod = open(output_path_model + str(rouge_counter).zfill(6) + '.txt', 'w+')
+        ofp_sys_sent = open(output_path_system_sent + str(rouge_counter).zfill(6) + '.txt', 'w+')
+        ofp_sys_segm = open(output_path_system_segm + str(rouge_counter).zfill(6) + '.txt', 'w+')
+
+        ofp_mod.write(y_o.encode('utf-8'))
+        ofp_mod.close()
 
         most_used_idxs_map = get_most_used(a_ls, y_ls)
         doc = ' '.join(x_ls_r)
@@ -76,8 +106,6 @@ def create_labels():
             s_split_orig = sent_o.split()
 
             if len(s_split) < len(s_split_orig):
-                print '_____', sent
-                print '_____', sent_o
                 break
 
             for i, _ in enumerate(s_split):
@@ -99,6 +127,9 @@ def create_labels():
                 single_y.append(longest_span[0])
                 single_y.append(longest_span[1])
 
+                ofp_sys_sent.write(sent_o.encode('utf-8') + ' ')
+                ofp_sys_segm.write(' '.join(s_split_orig[longest_span[0]:longest_span[1]]).encode('utf-8') + ' ')
+
                 num_pos += 1
             else:
                 single_y.extend([-1, -1])
@@ -107,11 +138,12 @@ def create_labels():
             data['x_o'].append(sent_o)
             data['y'].append(single_y)
 
-            print 'S', sent
-            print 'O', sent_o
-
             len_ls.append(len(data['x'][-1].split()))
-        print '\n'
+
+        rouge_counter += 1
+        ofp_sys_segm.close()
+        ofp_sys_sent.close()
+
     json.dump(data, ofp_json)
     ofp_json.close()
 

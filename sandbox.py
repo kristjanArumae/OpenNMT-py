@@ -274,7 +274,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
 loader_train_, loader_valid_, n = create_iterator()
 print('loaded data')
 
-train(CustomNetworkQA.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, n)
+train(CustomNetworkSent.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, n)
 
 
 

@@ -14,11 +14,13 @@ def tokenize_data(max_len=30):
     sent_tokenized_ls = []
     updated_labels_ls = []
 
-    for i, (sent, labels) in enumerate(zip(data['x'], data['y'])):
+    for i, (sent, labels, gs) in enumerate(zip(data['x'], data['y'], data['gs'])):
+        # if i == 64:
+        #     break
 
-        word_ls = sent.split()
-        label_begin = labels[1]
-        label_end = labels[2]
+        word_ls = ['[CLS]'] + sent.split()
+        label_begin = labels[1] + 1 if labels[1] != -1 else -1
+        label_end = labels[2] + 1 if labels[2] != -1 else -1
         location = 0
 
         sent_tokenized_as_idx = []
