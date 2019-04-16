@@ -106,7 +106,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
             continue
 
         if k < output_to_html:
-            ofp_html.write('<p>' + str(k) + '</br>')
+            ofp_html.write('<p>##' + str(k) + '##</br>')
 
         ofp_mod = open(output_path_model + 'd_' + str(rouge_counter).zfill(6) + '.txt', 'w+')
         ofp_sys_sent = open(output_path_system_sent + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
