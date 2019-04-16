@@ -11,7 +11,7 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 
-def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
+def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
     ifp_v = open('vocab.json', 'rb')
 
     vocab_map = json.load(ifp_v)
@@ -96,7 +96,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
 
     for k, (a_ls, x_ls,  x_ls_r, x_o, y_o, y_ls) in enumerate(zip(attn_list, src_list, src_list_raw, x_orig, y_orig, tgt_list)):
         assert len(x_ls) == len(x_ls_r)
-
+        assert rouge_counter == k
         most_used_idxs_map = get_most_used(a_ls, y_ls)
         doc = ' '.join(x_ls_r)
 
@@ -106,7 +106,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
             continue
 
         if k < output_to_html:
-            ofp_html.write('<p>')
+            ofp_html.write('<p>' + str(k) + '</br>')
 
         ofp_mod = open(output_path_model + 'd_' + str(rouge_counter).zfill(6) + '.txt', 'w+')
         ofp_sys_sent = open(output_path_system_sent + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
@@ -308,4 +308,4 @@ def combine_chunks(highlight_ls_):
     return highlight_ls, longest_span
 
 
-create_labels(output_to_html=50)
+create_labels(output_to_html=500)
