@@ -132,7 +132,7 @@ class CustomNetworkSent(BertPreTrainedModel):
             return logits
 
 
-def create_iterator(max_len=30):
+def create_iterator(max_len=45):
     ifp = open('data.nosync/train/cnndm_labeled_tokenized.json', 'rb')
     data = json.load(ifp)
 
@@ -153,11 +153,11 @@ def create_iterator(max_len=30):
 
         if start >= max_len or label == 0:
             label = 0
-            start = 30
-            end = 30
+            start = max_len
+            end = max_len
 
         if end > max_len:
-            end = 29
+            end = max_len - 1
 
         all_sent_labels.append(label)
 
@@ -223,13 +223,13 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, start_positions, end_position, sent_labels = batch
 
-            loss = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
+            loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
 
             loss.backward()
 
             loss_ls.append(float(loss.cpu().data.numpy()))
-            # loss_ls_s.append(float(loss_s.cpu().data.numpy()))
-            # loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
+            loss_ls_s.append(float(loss_s.cpu().data.numpy()))
+            loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
 
             if (step + 1) % 1 == 0:
                 optimizer.step()
@@ -274,7 +274,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
 loader_train_, loader_valid_, n = create_iterator()
 print('loaded data')
 
-train(CustomNetworkSent.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, n)
+train(CustomNetwork.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, n)
 
 
 
