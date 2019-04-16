@@ -308,4 +308,4 @@ def combine_chunks(highlight_ls_):
     return highlight_ls, longest_span
 
 
-create_labels(output_to_html=500)
+create_labels(output_to_html=1000)

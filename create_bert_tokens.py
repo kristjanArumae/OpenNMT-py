@@ -2,7 +2,7 @@ import json
 from pytorch_pretrained_bert import BertTokenizer
 
 
-def tokenize_data(data_split='train', max_len=30, output_to_html=-1):
+def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subset=4096):
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
     ifp = open('data.nosync/' + data_split + '/cnndm.json', 'rb')
@@ -19,6 +19,9 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1):
     updated_labels_ls = []
 
     for i, (sent, labels) in enumerate(zip(data['x_o'], data['y'])):
+
+        if i == small_subset:
+            break
 
         word_ls = ['[CLS]'] + sent.split()
         label_begin = labels[1] + 1 if labels[1] != -1 else -1
