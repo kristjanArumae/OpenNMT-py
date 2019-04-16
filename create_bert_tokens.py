@@ -35,9 +35,6 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1):
             elif moving_idx > label_end and location == 1:
                 location += 1
 
-            if word == 'assaulting':
-                print('oh')
-
             tok = tokenizer.tokenize(word)
             x = tokenizer.convert_tokens_to_ids(tok)
             len_x = len(x)
@@ -96,5 +93,8 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1):
 
     ofp.close()
 
+    if output_to_html > 0:
+        ofp_html.close()
 
-tokenize_data(output_to_html=200)
+
+tokenize_data(output_to_html=10000)
