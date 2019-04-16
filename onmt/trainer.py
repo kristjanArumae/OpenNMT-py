@@ -210,7 +210,7 @@ class Trainer(object):
         for i, (batches, normalization) in enumerate(
                 self._accum_batches(train_iter)):
 
-            if i % (65536 / 16) == 0 and i > 0:
+            if i % (128 / 16) == 0 and i > 0:
                 logger.info('SAVING OUTPUT')
 
                 with open(self.out_file + str(self.out_cnt), 'w+') as ofp:
