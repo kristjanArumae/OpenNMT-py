@@ -100,4 +100,4 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
         ofp_html.close()
 
 
-tokenize_data(output_to_html=100000)
+tokenize_data(output_to_html=1000000)
