@@ -265,10 +265,10 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=3):
                 break
 
     plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
-    # plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
-    # plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
-    #
-    # plt.legend(loc='best')
+    plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
+    plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
+
+    plt.legend(loc='best')
     plt.savefig('ranges2.png', dpi=400)
 
 loader_train_, loader_valid_, n = create_iterator()
