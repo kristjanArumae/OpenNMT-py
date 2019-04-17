@@ -2,7 +2,7 @@ import json
 from pytorch_pretrained_bert import BertTokenizer
 
 
-def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subset=4096):
+def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subset=-1):
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
     ifp = open('data.nosync/' + data_split + '/cnndm.json', 'rb')
@@ -100,4 +100,4 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
         ofp_html.close()
 
 
-tokenize_data(output_to_html=10000)
+tokenize_data(output_to_html=100000)

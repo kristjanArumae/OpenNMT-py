@@ -195,7 +195,7 @@ def create_iterator(max_len=45):
     return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=32),  DataLoader(tensor_data_valid, batch_size=32), len(y_ls)
 
 
-def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
+def train(model, loader_train, loader_valid, num_examples, num_train_epochs=3):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     num_train_optimization_steps = int(num_examples / 32)
