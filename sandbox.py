@@ -138,7 +138,7 @@ def create_iterator(max_len=30):
 
     ifp.close()
 
-    x_ls, y_ls = data['x'], data['y']
+    x_ls, y_ls, s_idx_ls = data['x'], data['y'], data['s_id']
 
     all_input_ids = []
     all_input_mask = []
@@ -149,7 +149,7 @@ def create_iterator(max_len=30):
 
     val_split = len(y_ls)//10
 
-    for (x, _), (label, start, end) in zip(x_ls, y_ls):
+    for (x, _), (label, start, end), s_id in zip(x_ls, y_ls, s_idx_ls):
 
         if start >= max_len or label == 0:
             label = 0
@@ -173,10 +173,7 @@ def create_iterator(max_len=30):
         all_input_ids.append(x[:max_len])
         all_input_mask.append(mask[:max_len])
 
-        segment_id = [0] * max_len
-        if label > 0:
-            for i in range(start, end):
-                segment_id[i] = 1
+        segment_id = [s_id] * max_len
 
         all_segment_ids.append(segment_id[:max_len])
 
@@ -184,21 +181,23 @@ def create_iterator(max_len=30):
                                       torch.tensor(all_input_mask[val_split:], dtype=torch.long),
                                       torch.tensor(all_start_positions[val_split:], dtype=torch.long),
                                       torch.tensor(all_end_positions[val_split:], dtype=torch.long),
-                                      torch.tensor(all_sent_labels[val_split:], dtype=torch.long))
+                                      torch.tensor(all_sent_labels[val_split:], dtype=torch.long),
+                                      torch.tensor(all_segment_ids[val_split:], dtype=torch.long))
 
     tensor_data_valid = TensorDataset(torch.tensor(all_input_ids[:val_split], dtype=torch.long),
                                       torch.tensor(all_input_mask[:val_split], dtype=torch.long),
                                       torch.tensor(all_start_positions[:val_split], dtype=torch.long),
                                       torch.tensor(all_end_positions[:val_split], dtype=torch.long),
-                                      torch.tensor(all_sent_labels[:val_split], dtype=torch.long))
+                                      torch.tensor(all_sent_labels[:val_split], dtype=torch.long),
+                                      torch.tensor(all_segment_ids[:val_split], dtype=torch.long))
 
-    return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=32),  DataLoader(tensor_data_valid, batch_size=32), len(y_ls)
+    return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=64),  DataLoader(tensor_data_valid, batch_size=64), len(y_ls)
 
 
 def train(model, loader_train, loader_valid, num_examples, num_train_epochs=3):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    num_train_optimization_steps = int(num_examples / 32)
+    num_train_optimization_steps = int(num_examples / 64)
 
     no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
 
@@ -221,9 +220,9 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=3):
         for step, batch in enumerate(tqdm(loader_train, desc="Iteration")):
 
             batch = tuple(t.to(device) for t in batch)
-            input_ids, input_mask, start_positions, end_position, sent_labels = batch
+            input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch
 
-            loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
+            loss, loss_s, loss_q = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position, weights)
 
             loss.backward()
 
@@ -236,34 +235,34 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=3):
                 optimizer.step()
                 optimizer.zero_grad()
 
-        with torch.no_grad():
-            continue
-            loss_valid = None
-
-            for _, batch_valid in enumerate(tqdm(loader_valid, desc="Validation")):
-                batch_valid = tuple(t2.to(device) for t2 in batch_valid)
-
-                input_ids, input_mask, start_positions, end_position, sent_labels = batch_valid
-                loss_, _, _ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
-
-                if loss_valid is None:
-                    loss_valid = loss_
-                else:
-                    loss_valid += loss_
-
-            loss_valid = float(loss_valid.cpu().data.numpy())
-
-            if loss_valid < best_loss:
-                best_loss = loss_valid
-            else:
-                plt.plot([i for i in range(len(loss_ls))], loss_ls, '-',  label="loss", linewidth=1)
-                plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
-                plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
-
-                plt.legend(loc='best')
-                plt.savefig('ranges2.png', dpi=400)
-
-                break
+        # with torch.no_grad():
+        #     continue
+        #     loss_valid = None
+        #
+        #     for _, batch_valid in enumerate(tqdm(loader_valid, desc="Validation")):
+        #         batch_valid = tuple(t2.to(device) for t2 in batch_valid)
+        #
+        #         input_ids, input_mask, start_positions, end_position, sent_labels = batch_valid
+        #         loss_, _, _ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
+        #
+        #         if loss_valid is None:
+        #             loss_valid = loss_
+        #         else:
+        #             loss_valid += loss_
+        #
+        #     loss_valid = float(loss_valid.cpu().data.numpy())
+        #
+        #     if loss_valid < best_loss:
+        #         best_loss = loss_valid
+        #     else:
+        #         plt.plot([i for i in range(len(loss_ls))], loss_ls, '-',  label="loss", linewidth=1)
+        #         plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
+        #         plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
+        #
+        #         plt.legend(loc='best')
+        #         plt.savefig('ranges2.png', dpi=400)
+        #
+        #         break
 
     plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
     plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
