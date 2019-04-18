@@ -16,7 +16,7 @@ class CustomNetwork(BertPreTrainedModel):
         super(CustomNetwork, self).__init__(config)
 
         self.num_labels = num_labels
-        config.type_vocab_size = config.max_position_embeddings
+        # config.type_vocab_size = config.max_position_embeddings
         self.bert = BertModel(config)
 
         self.dropout_qa = nn.Dropout(config.hidden_dropout_prob)
@@ -147,7 +147,6 @@ def create_iterator(max_len=30, max_size=10000):
     all_end_positions = []
     all_sent_labels = []
 
-    val_split = len(y_ls)//10
     num_t = 0
     for (x, _), (label, start, end), s_id in zip(x_ls, y_ls, s_idx_ls):
 
@@ -180,6 +179,8 @@ def create_iterator(max_len=30, max_size=10000):
 
         if num_t == max_size:
             break
+
+    val_split = len(all_input_ids) // 10
 
     tensor_data_train = TensorDataset(torch.tensor(all_input_ids[val_split:], dtype=torch.long),
                                       torch.tensor(all_input_mask[val_split:], dtype=torch.long),
@@ -226,7 +227,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=3):
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch
 
-            loss, loss_s, loss_q = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position, weights)
+            loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
 
             loss.backward()
 
