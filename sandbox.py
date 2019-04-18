@@ -132,7 +132,7 @@ class CustomNetworkSent(BertPreTrainedModel):
             return logits
 
 
-def create_iterator(max_len=20):
+def create_iterator(max_len=30):
     ifp = open('data.nosync/train/cnndm_labeled_tokenized.json', 'rb')
     data = json.load(ifp)
 
