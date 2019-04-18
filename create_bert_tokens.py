@@ -17,13 +17,14 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
 
     sent_tokenized_ls = []
     updated_labels_ls = []
+    updated_s_id_ls = []
 
-    for i, (sent, labels) in enumerate(zip(data['x_o'], data['y'])):
+    for i, (sent, labels, sent_id) in enumerate(zip(data['x_o'], data['y'], data['s_id'])):
 
         if i == small_subset:
             break
 
-        word_ls = ['[CLS]'] + sent.split()
+        word_ls = ['[CLS]'] + sent.split() + ['[SEP]']
         label_begin = labels[1] + 1 if labels[1] != -1 else -1
         label_end = labels[2] + 1 if labels[2] != -1 else -1
         location = 0
@@ -82,6 +83,8 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
             updated_labels_ls.append([1, label_begin, label_end])
         else:
             updated_labels_ls.append(labels)
+
+        updated_s_id_ls.append(sent_id)
         sent_tokenized_ls.append([sent_tokenized_as_idx, sent_tokenized_as_tok])
 
     ofp = open('data.nosync/' + data_split + '/cnndm_labeled_tokenized.json', 'w+')
@@ -89,6 +92,7 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
     updated_data = dict()
     updated_data['x'] = sent_tokenized_ls
     updated_data['y'] = updated_labels_ls
+    updated_data['s_id'] = updated_s_id_ls
 
     print(len(updated_labels_ls))
 

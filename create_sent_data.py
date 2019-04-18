@@ -42,13 +42,15 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
     if output_to_html > 0:
         ofp_html = open('data.nosync/' + data_split + '/cnndm.html', 'w+')
 
-    data = {'x': [], 'x_o': [], 'y': []}
+    data = {'x': [], 'x_o': [], 'y': [], 's_id': []}
 
     for i in xrange(num_attn_files):
         ifp_model = open('stanford_attn' + str(i), 'rb')
         ifp_data = np.load(ifp_model)
 
         for j, sample in enumerate(ifp_data):
+            if j == 1000:
+                break
             src_ls_sample = sample[0]
             tgt_ls_sample = sample[1]
             attn_ls_sample = sample[2]
@@ -116,7 +118,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
 
         num_used = 0
 
-        for sent, sent_o in zip(sentences, sentences_orig):
+        for send_idx, (sent, sent_o) in enumerate(zip(sentences, sentences_orig)):
             total_in_sent = 0
             highlight_ls_pre_combined = []
             s_split = sent.split()
@@ -191,6 +193,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
             data['x'].append(sent)
             data['x_o'].append(sent_o)
             data['y'].append(single_y)
+            data['s_id'].append(send_idx)
 
             len_ls.append(len(data['x'][-1].split()))
 

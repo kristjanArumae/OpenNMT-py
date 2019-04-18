@@ -16,7 +16,7 @@ class CustomNetwork(BertPreTrainedModel):
         super(CustomNetwork, self).__init__(config)
 
         self.num_labels = num_labels
-
+        config.type_vocab_size = config.max_position_embeddings
         self.bert = BertModel(config)
 
         self.dropout_qa = nn.Dropout(config.hidden_dropout_prob)
@@ -132,14 +132,13 @@ class CustomNetworkSent(BertPreTrainedModel):
             return logits
 
 
-def create_iterator(max_len=30):
+def create_iterator(max_len=30, max_size=10000):
     ifp = open('data.nosync/train/cnndm_labeled_tokenized.json', 'rb')
     data = json.load(ifp)
 
     ifp.close()
 
-    x_ls, y_ls = data['x'], data['y']
-    # x_ls, y_ls, s_idx_ls = data['x'], data['y'], data['s_id']
+    x_ls, y_ls, s_idx_ls = data['x'], data['y'], data['s_id']
 
     all_input_ids = []
     all_input_mask = []
@@ -149,9 +148,9 @@ def create_iterator(max_len=30):
     all_sent_labels = []
 
     val_split = len(y_ls)//10
+    num_t = 0
+    for (x, _), (label, start, end), s_id in zip(x_ls, y_ls, s_idx_ls):
 
-    # for (x, _), (label, start, end), s_id in zip(x_ls, y_ls, s_idx_ls):
-    for (x, _), (label, start, end) in zip(x_ls, y_ls):
         if start >= max_len or label == 0:
             label = 0
             start = max_len
@@ -174,9 +173,13 @@ def create_iterator(max_len=30):
         all_input_ids.append(x[:max_len])
         all_input_mask.append(mask[:max_len])
 
-        # segment_id = [s_id] * max_len
+        segment_id = [s_id] * max_len
 
-        all_segment_ids.append([])
+        all_segment_ids.append(segment_id[:max_len])
+        num_t +=1
+
+        if num_t == max_size:
+            break
 
     tensor_data_train = TensorDataset(torch.tensor(all_input_ids[val_split:], dtype=torch.long),
                                       torch.tensor(all_input_mask[val_split:], dtype=torch.long),
@@ -223,7 +226,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=3):
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch
 
-            loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
+            loss, loss_s, loss_q = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position, weights)
 
             loss.backward()
 
