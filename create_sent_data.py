@@ -48,7 +48,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
         ifp_model = open('stanford_attn' + str(i), 'rb')
         ifp_data = np.load(ifp_model)
 
-        for sample in ifp_data:
+        for j, sample in enumerate(ifp_data):
             src_ls_sample = sample[0]
             tgt_ls_sample = sample[1]
             attn_ls_sample = sample[2]
@@ -67,36 +67,32 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
     ifp_hl = io.open("data.nosync/train.txt.tgt", mode="r", encoding="utf-8")
     ifp_orig = io.open("data.nosync/train.txt.src", mode="r", encoding="utf-8")
 
-    x_orig, y_orig = [], []
+    x_orig, y_orig = dict(), dict()
 
     for i, line_x in enumerate(ifp_orig):
-
-        if i > len(src_list) - 1:
-            break
-        x_orig.append(line_x.rstrip())
+        x_orig[i] = line_x.rstrip()
 
     for i, line_y in enumerate(ifp_hl):
-
-        if i > len(src_list) - 1:
-            break
-        y_orig.append(line_y.rstrip())
+        y_orig[i] = line_y.rstrip()
 
     ifp_orig.close()
     ifp_hl.close()
 
     print len(tgt_list), len(src_list)
 
-    src_list_raw = reverse_batch(src_list_raw, batch_idx)
-    attn_list = reverse_batch(attn_list, batch_idx)
-    src_list = reverse_batch(src_list, batch_idx)
-    tgt_list = reverse_batch(tgt_list, batch_idx)
-
     rouge_counter = 0
     total_unused = 0
 
-    for k, (a_ls, x_ls,  x_ls_r, x_o, y_o, y_ls) in enumerate(zip(attn_list, src_list, src_list_raw, x_orig, y_orig, tgt_list)):
+    for k, (a_ls, x_ls,  x_ls_r, y_ls, b_id) in enumerate(zip(attn_list, src_list, src_list_raw, tgt_list, batch_idx)):
         assert len(x_ls) == len(x_ls_r)
         assert rouge_counter == k
+
+        try:
+            x_o = x_orig[b_id]
+            y_o = y_orig[b_id]
+        except KeyError:
+            continue
+
         most_used_idxs_map = get_most_used(a_ls, y_ls)
         doc = ' '.join(x_ls_r)
 
@@ -220,29 +216,20 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
     print np.median(len_ls), np.mean(len_ls)
 
 
-def reverse_batch(x, batch_idx_ls, batch_size=128):
-    ret_arr, batched_arr, cur_batch = [], [], []
-    batch_idx = 0
+def reverse_batch(x, batch_idx_ls):
+    ret_arr, batched_arr = [], []
 
     for item_x, item_b in zip(x, batch_idx_ls):
+        batched_arr.append((item_x, item_b))
 
-        if batch_idx < batch_size:
-            cur_batch.append((item_x, item_b))
-            batch_idx += 1
-        else:
-            batched_arr.append(cur_batch)
+    batched_arr.sort(key=text_sort_key)
 
-            cur_batch = []
+    prev_i = -1
+    for item, i in batched_arr:
+        ret_arr.append(item)
 
-            cur_batch.append((item_x, item_b))
-            batch_idx = 1
-
-    for batch in batched_arr:
-
-        batch.sort(key=text_sort_key)
-
-        for item, i in batch:
-            ret_arr.append(item)
+        assert i - prev_i == 0
+        prev_i = i
 
     return ret_arr
 
