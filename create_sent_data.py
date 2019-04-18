@@ -49,8 +49,8 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
         ifp_data = np.load(ifp_model)
 
         for j, sample in enumerate(ifp_data):
-            if j == 1000:
-                break
+            # if j == 1000:
+            #     break
             src_ls_sample = sample[0]
             tgt_ls_sample = sample[1]
             attn_ls_sample = sample[2]
