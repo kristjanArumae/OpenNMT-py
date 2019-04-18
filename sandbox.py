@@ -227,7 +227,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=3):
 
             loss.backward()
 
-            if step % 100 == 0
+            if step % 100 == 0:
                 loss_ls.append(float(loss.cpu().data.numpy()))
                 loss_ls_s.append(float(loss_s.cpu().data.numpy()))
                 loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
