@@ -138,7 +138,8 @@ def create_iterator(max_len=30):
 
     ifp.close()
 
-    x_ls, y_ls, s_idx_ls = data['x'], data['y'], data['s_id']
+    x_ls, y_ls = data['x'], data['y']
+    # x_ls, y_ls, s_idx_ls = data['x'], data['y'], data['s_id']
 
     all_input_ids = []
     all_input_mask = []
@@ -149,8 +150,8 @@ def create_iterator(max_len=30):
 
     val_split = len(y_ls)//10
 
-    for (x, _), (label, start, end), s_id in zip(x_ls, y_ls, s_idx_ls):
-
+    # for (x, _), (label, start, end), s_id in zip(x_ls, y_ls, s_idx_ls):
+    for (x, _), (label, start, end) in zip(x_ls, y_ls):
         if start >= max_len or label == 0:
             label = 0
             start = max_len
@@ -173,9 +174,9 @@ def create_iterator(max_len=30):
         all_input_ids.append(x[:max_len])
         all_input_mask.append(mask[:max_len])
 
-        segment_id = [s_id] * max_len
+        # segment_id = [s_id] * max_len
 
-        all_segment_ids.append(segment_id[:max_len])
+        all_segment_ids.append([])
 
     tensor_data_train = TensorDataset(torch.tensor(all_input_ids[val_split:], dtype=torch.long),
                                       torch.tensor(all_input_mask[val_split:], dtype=torch.long),
@@ -222,7 +223,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=3):
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch
 
-            loss, loss_s, loss_q = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position, weights)
+            loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
 
             loss.backward()
 
