@@ -181,7 +181,7 @@ def create_iterator(max_len=30, max_size=-1):
         if num_t == max_size:
             break
 
-    val_split = len(all_input_ids) // 10
+    val_split = len(all_input_ids) // 20
 
     tensor_data_train = TensorDataset(torch.tensor(all_input_ids[val_split:], dtype=torch.long),
                                       torch.tensor(all_input_mask[val_split:], dtype=torch.long),
