@@ -256,7 +256,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
 
                     if loss_mean < best_loss:
                         best_loss = loss_mean
-                    elif loss_mean - 2*loss_std > best_loss:
+                    else:
 
                         plt.plot([i for i in range(len(loss_ls))], loss_ls, '-',  label="loss", linewidth=1)
                         plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
@@ -266,7 +266,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
                         plt.legend(loc='best')
                         plt.savefig('ranges2.png', dpi=400)
 
-                        break
+                        return
 
     plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
     plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
