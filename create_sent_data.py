@@ -11,7 +11,7 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 
-def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
+def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
     ifp_v = open('vocab.json', 'rb')
 
     vocab_map = json.load(ifp_v)
@@ -49,8 +49,6 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
         ifp_data = np.load(ifp_model)
 
         for j, sample in enumerate(ifp_data):
-            # if j == 1000:
-            #     break
             src_ls_sample = sample[0]
             tgt_ls_sample = sample[1]
             attn_ls_sample = sample[2]
@@ -199,7 +197,6 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
 
         if num_used == 0:
             total_unused += 1
-            print rouge_counter
 
         rouge_counter += 1
         ofp_sys_segm.close()
