@@ -9,6 +9,7 @@ from pytorch_pretrained_bert.modeling import BertPreTrainedModel
 from tqdm import tqdm, trange
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 class CustomNetwork(BertPreTrainedModel):
@@ -216,7 +217,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
     optimizer = BertAdam(optimizer_grouped_parameters, lr=1e-06, warmup=0.1, t_total=num_train_optimization_steps)
 
     model.train()
-    loss_ls, loss_ls_s, loss_ls_qa = [], [], []
+    loss_ls, loss_ls_s, loss_ls_qa, loss_ls_v = [], [], [], []
     best_loss = 100.0
 
     weights = torch.tensor([0.01, 1.0], dtype=torch.float32).to(device)
@@ -233,33 +234,34 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
             optimizer.step()
             optimizer.zero_grad()
 
-                # loss_ls.append(float(loss.cpu().data.numpy()))
-                # loss_ls_s.append(float(loss_s.cpu().data.numpy()))
-                # loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
-
             if step % 100 == 0:
+                loss_ls.append(float(loss.cpu().data.numpy()))
+                loss_ls_s.append(float(loss_s.cpu().data.numpy()))
+                loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
+
                 with torch.no_grad():
-                    loss_valid = None
+                    loss_valid = []
 
                     for _, batch_valid in enumerate(tqdm(loader_valid, desc="Validation")):
                         batch_valid = tuple(t2.to(device) for t2 in batch_valid)
 
-                        input_ids, input_mask, start_positions, end_position, sent_labels = batch_valid
+                        input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch_valid
                         loss_, _, _ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
 
-                        if loss_valid is None:
-                            loss_valid = loss_
-                        else:
-                            loss_valid += loss_
+                        loss_valid.append(loss.cpu().data.numpy())
 
-                    loss_valid = float(loss_valid.cpu().data.numpy())
+                    loss_mean, loss_std = np.mean(loss_valid), np.std(loss_valid)
 
-                    if loss_valid < best_loss:
-                        best_loss = loss_valid
-                    else:
+                    loss_ls_v.append(loss_mean)
+
+                    if loss_mean < best_loss:
+                        best_loss = loss_mean
+                    elif loss_mean - 2*loss_std > best_loss:
+
                         plt.plot([i for i in range(len(loss_ls))], loss_ls, '-',  label="loss", linewidth=1)
                         plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
                         plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
+                        plt.plot([i for i in range(len(loss_ls))], loss_ls_v, '-', label="valid", linewidth=1)
 
                         plt.legend(loc='best')
                         plt.savefig('ranges2.png', dpi=400)
@@ -269,6 +271,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
     plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
     plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
     plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
+    plt.plot([i for i in range(len(loss_ls))], loss_ls_v, '-', label="valid", linewidth=1)
 
     plt.legend(loc='best')
     plt.savefig('ranges2.png', dpi=400)
