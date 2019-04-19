@@ -197,13 +197,13 @@ def create_iterator(max_len=30, max_size=30000):
                                       torch.tensor(all_sent_labels[:val_split], dtype=torch.long),
                                       torch.tensor(all_segment_ids[:val_split], dtype=torch.long))
 
-    return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=64),  DataLoader(tensor_data_valid, batch_size=64), len(y_ls)
+    return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=128),  DataLoader(tensor_data_valid, batch_size=128), len(y_ls)
 
 
 def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    num_train_optimization_steps = int(num_examples / 64)
+    num_train_optimization_steps = int(num_examples / 128)
 
     no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
 
@@ -214,7 +214,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
 
-    optimizer = BertAdam(optimizer_grouped_parameters, lr=1e-06, warmup=0.1, t_total=num_train_optimization_steps)
+    optimizer = BertAdam(optimizer_grouped_parameters, lr=1e-05, warmup=0.1, t_total=num_train_optimization_steps)
 
     model.train()
     loss_ls, loss_ls_s, loss_ls_qa, loss_ls_v = [], [], [], []
@@ -236,7 +236,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
             optimizer.step()
             optimizer.zero_grad()
 
-            if (step + 1) % 10 == 0:
+            if (step + 1) % 20 == 0:
                 loss_ls.append(float(loss.cpu().data.numpy()))
                 loss_ls_s.append(float(loss_s.cpu().data.numpy()))
                 loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
