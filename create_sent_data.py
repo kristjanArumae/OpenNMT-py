@@ -91,7 +91,6 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
 
     for k, (a_ls, x_ls,  x_ls_r, y_ls, b_id) in enumerate(zip(attn_list, src_list, src_list_raw, tgt_list, batch_idx)):
         assert len(x_ls) == len(x_ls_r)
-        assert rouge_counter == k
 
         if (k + 1) % 10000 == 0:
             print 'at doc', k, '/', total_d
@@ -115,12 +114,13 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
         if k < output_to_html:
             ofp_html.write('<p>##' + str(k) + '##</br>')
 
-        ofp_mod = open(output_path_model + 'd_' + str(rouge_counter).zfill(6) + '.txt', 'w+')
-        ofp_sys_sent = open(output_path_system_sent + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
-        ofp_sys_segm = open(output_path_system_segm + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
+        if data_split != 'train':
+            ofp_mod = open(output_path_model + 'd_' + str(rouge_counter).zfill(6) + '.txt', 'w+')
+            ofp_sys_sent = open(output_path_system_sent + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
+            ofp_sys_segm = open(output_path_system_segm + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
 
-        ofp_mod.write(y_o.encode('utf-8').replace('<t>', '').replace('</t>', ''))
-        ofp_mod.close()
+            ofp_mod.write(y_o.encode('utf-8').replace('<t>', '').replace('</t>', ''))
+            ofp_mod.close()
 
         sentences_orig = sent_tokenize(x_o)
         token_idx = 0
@@ -190,8 +190,9 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
                 single_y.append(longest_span[0])
                 single_y.append(longest_span[1])
 
-                ofp_sys_sent.write(sent_o.encode('utf-8') + ' ')
-                ofp_sys_segm.write(' '.join(s_split_orig[longest_span[0]:longest_span[1]]).encode('utf-8') + ' ')
+                if data_split != 'train':
+                    ofp_sys_sent.write(sent_o.encode('utf-8') + ' ')
+                    ofp_sys_segm.write(' '.join(s_split_orig[longest_span[0]:longest_span[1]]).encode('utf-8') + ' ')
 
                 num_pos += 1
 
