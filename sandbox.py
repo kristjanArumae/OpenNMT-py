@@ -3,7 +3,7 @@ from torch import nn
 import json
 from torch.utils.data import DataLoader, RandomSampler, TensorDataset
 
-from pytorch_pretrained_bert import BertModel, BertAdam
+from pytorch_pretrained_bert import BertModel, BertAdam, BertConfig
 from pytorch_pretrained_bert.modeling import BertPreTrainedModel
 
 from tqdm import tqdm, trange
@@ -230,44 +230,41 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
             loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
 
             loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
 
-            if step % 10 == 0:
-                loss_ls.append(float(loss.cpu().data.numpy()))
-                loss_ls_s.append(float(loss_s.cpu().data.numpy()))
-                loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
+                # loss_ls.append(float(loss.cpu().data.numpy()))
+                # loss_ls_s.append(float(loss_s.cpu().data.numpy()))
+                # loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
 
-            if (step + 1) % 1 == 0:
-                optimizer.step()
-                optimizer.zero_grad()
+            if step % 100 == 0:
+                with torch.no_grad():
+                    loss_valid = None
 
-        # with torch.no_grad():
-        #     continue
-        #     loss_valid = None
-        #
-        #     for _, batch_valid in enumerate(tqdm(loader_valid, desc="Validation")):
-        #         batch_valid = tuple(t2.to(device) for t2 in batch_valid)
-        #
-        #         input_ids, input_mask, start_positions, end_position, sent_labels = batch_valid
-        #         loss_, _, _ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
-        #
-        #         if loss_valid is None:
-        #             loss_valid = loss_
-        #         else:
-        #             loss_valid += loss_
-        #
-        #     loss_valid = float(loss_valid.cpu().data.numpy())
-        #
-        #     if loss_valid < best_loss:
-        #         best_loss = loss_valid
-        #     else:
-        #         plt.plot([i for i in range(len(loss_ls))], loss_ls, '-',  label="loss", linewidth=1)
-        #         plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
-        #         plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
-        #
-        #         plt.legend(loc='best')
-        #         plt.savefig('ranges2.png', dpi=400)
-        #
-        #         break
+                    for _, batch_valid in enumerate(tqdm(loader_valid, desc="Validation")):
+                        batch_valid = tuple(t2.to(device) for t2 in batch_valid)
+
+                        input_ids, input_mask, start_positions, end_position, sent_labels = batch_valid
+                        loss_, _, _ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
+
+                        if loss_valid is None:
+                            loss_valid = loss_
+                        else:
+                            loss_valid += loss_
+
+                    loss_valid = float(loss_valid.cpu().data.numpy())
+
+                    if loss_valid < best_loss:
+                        best_loss = loss_valid
+                    else:
+                        plt.plot([i for i in range(len(loss_ls))], loss_ls, '-',  label="loss", linewidth=1)
+                        plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
+                        plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
+
+                        plt.legend(loc='best')
+                        plt.savefig('ranges2.png', dpi=400)
+
+                        break
 
     plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
     plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
