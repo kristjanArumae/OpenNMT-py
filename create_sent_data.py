@@ -211,8 +211,9 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
             total_unused += 1
 
         rouge_counter += 1
-        ofp_sys_segm.close()
-        ofp_sys_sent.close()
+        if data_split != 'train':
+            ofp_sys_segm.close()
+            ofp_sys_sent.close()
 
         if ofp_html is not None:
             ofp_html.write('<p>')
