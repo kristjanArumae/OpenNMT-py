@@ -44,7 +44,10 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
 
     data = {'x': [], 'x_o': [], 'y': [], 's_id': []}
 
+    print 'loading openNMT output'
     for i in xrange(num_attn_files):
+        print 'file', i + 1
+
         ifp_model = open('stanford_attn' + str(i), 'rb')
         ifp_data = np.load(ifp_model)
 
@@ -69,9 +72,11 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
 
     x_orig, y_orig = dict(), dict()
 
+    print 'loading x_orig'
     for i, line_x in enumerate(ifp_orig):
         x_orig[i] = line_x.rstrip()
 
+    print 'loading y_orig'
     for i, line_y in enumerate(ifp_hl):
         y_orig[i] = line_y.rstrip()
 
@@ -80,6 +85,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
 
     print len(tgt_list), len(src_list)
 
+    total_d = len(src_list)
     rouge_counter = 0
     total_unused = 0
 
@@ -87,10 +93,14 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
         assert len(x_ls) == len(x_ls_r)
         assert rouge_counter == k
 
+        if (k + 1) % 10000 == 0:
+            print 'at doc', k, '/', total_d
+
         try:
             x_o = x_orig[b_id]
             y_o = y_orig[b_id]
         except KeyError:
+            print 'KeyError', k
             continue
 
         most_used_idxs_map = get_most_used(a_ls, y_ls)
@@ -99,6 +109,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
         try:
             sentences = sent_tokenize(doc.encode('utf-8'))
         except UnicodeDecodeError:
+            total_unused += 1
             continue
 
         if k < output_to_html:
