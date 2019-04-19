@@ -236,7 +236,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=100)
             optimizer.step()
             optimizer.zero_grad()
 
-            if (step + 1) % 100 == 0:
+            if (step + 1) % 1000 == 0:
                 loss_ls.append(float(loss.cpu().data.numpy()))
                 loss_ls_s.append(float(loss_s.cpu().data.numpy()))
                 loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
@@ -248,7 +248,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=100)
                         batch_valid = tuple(t2.to(device) for t2 in batch_valid)
 
                         input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch_valid
-                        loss_, _, _ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
+                        loss_, _, _ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, None)
 
                         loss_valid.append(loss.cpu().data.numpy())
 
