@@ -133,7 +133,7 @@ class CustomNetworkSent(BertPreTrainedModel):
             return logits
 
 
-def create_iterator(max_len=30, max_size=30000):
+def create_iterator(max_len=30, max_size=-1):
     ifp = open('data.nosync/train/cnndm_labeled_tokenized.json', 'rb')
     data = json.load(ifp)
 
@@ -200,7 +200,7 @@ def create_iterator(max_len=30, max_size=30000):
     return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=128),  DataLoader(tensor_data_valid, batch_size=128), len(y_ls)
 
 
-def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
+def train(model, loader_train, loader_valid, num_examples, num_train_epochs=100):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     num_train_optimization_steps = int(num_examples / 128)
@@ -220,7 +220,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
     loss_ls, loss_ls_s, loss_ls_qa, loss_ls_v = [], [], [], []
     best_loss = 100.0
     unchanged = 0
-    unchanged_limit=10
+    unchanged_limit=30
 
     weights = torch.tensor([0.01, 1.0], dtype=torch.float32).to(device)
 
@@ -236,7 +236,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
             optimizer.step()
             optimizer.zero_grad()
 
-            if (step + 1) % 20 == 0:
+            if (step + 1) % 100 == 0:
                 loss_ls.append(float(loss.cpu().data.numpy()))
                 loss_ls_s.append(float(loss_s.cpu().data.numpy()))
                 loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
