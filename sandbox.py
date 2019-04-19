@@ -219,6 +219,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
     model.train()
     loss_ls, loss_ls_s, loss_ls_qa, loss_ls_v = [], [], [], []
     best_loss = 100.0
+    unchanged = 0
+    unchanged_limit=10
 
     weights = torch.tensor([0.01, 1.0], dtype=torch.float32).to(device)
 
@@ -256,7 +258,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
 
                     if loss_mean < best_loss:
                         best_loss = loss_mean
-                    else:
+                        unchanged = 0
+                    elif unchanged > unchanged_limit:
 
                         plt.plot([i for i in range(len(loss_ls))], loss_ls, '-',  label="loss", linewidth=1)
                         plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
@@ -267,6 +270,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=10):
                         plt.savefig('ranges2.png', dpi=400)
 
                         return
+                    else:
+                        unchanged += 1
 
     plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
     plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
