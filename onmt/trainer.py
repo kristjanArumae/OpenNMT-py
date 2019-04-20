@@ -210,14 +210,14 @@ class Trainer(object):
         for i, (batches, normalization) in enumerate(
                 self._accum_batches(train_iter)):
 
-            # if i % (65536 / 16) == 0 and i > 0:
-            #     logger.info('SAVING OUTPUT')
-            #
-            #     with open(self.out_file + str(self.out_cnt), 'w+') as ofp:
-            #         np.save(ofp, self.out_ls)
-            #
-            #     self.out_ls = []
-            #     self.out_cnt += 1
+            if i % (65536 / 16) == 0 and i > 0:
+                logger.info('SAVING OUTPUT')
+
+                with open(self.out_file + str(self.out_cnt), 'w+') as ofp:
+                    np.save(ofp, self.out_ls)
+
+                self.out_ls = []
+                self.out_cnt += 1
 
             self._gradient_accumulation(
                 batches,
@@ -277,8 +277,7 @@ class Trainer(object):
     def _gradient_accumulation(self, true_batches, report_stats):
         if self.accum_count > 1:
             self.optim.zero_grad()
-        begin_idx = 0
-        end_idx = 16
+
         for batch in true_batches:
             target_size = batch.tgt.size(0)
             # Truncated BPTT: reminder not compatible with accum > 1
