@@ -11,7 +11,7 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 
-def create_labels(data_split='test', output_to_html=-1, num_attn_files=0):
+def create_labels(data_split='test', output_to_html=-1, num_attn_files=1):
     ifp_v = open('vocab.json', 'rb')
 
     vocab_map = json.load(ifp_v)
