@@ -99,7 +99,7 @@ class Trainer(object):
                  accum_steps=[0],
                  n_gpu=1, gpu_rank=1,
                  gpu_verbose_level=0, report_manager=None, model_saver=None,
-                 average_decay=0, average_every=1, model_dtype='fp32', output_file='stanford_attn'):
+                 average_decay=0, average_every=1, model_dtype='fp32', output_file='stanford_attn_test'):
         # Basic attributes.
         self.model = model
         self.train_loss = train_loss
