@@ -11,7 +11,7 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 
-def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
+def create_labels(data_split='test', output_to_html=-1, num_attn_files=5):
     ifp_v = open('vocab.json', 'rb')
 
     vocab_map = json.load(ifp_v)
@@ -48,7 +48,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
     for i in xrange(num_attn_files):
         print 'file', i + 1
 
-        ifp_model = open('stanford_attn' + str(i), 'rb')
+        ifp_model = open('stanford_attn_test' + str(i), 'rb')
         ifp_data = np.load(ifp_model)
 
         for j, sample in enumerate(ifp_data):
@@ -67,8 +67,8 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
 
         ifp_model.close()
 
-    ifp_hl = io.open("data.nosync/train.txt.tgt", mode="r", encoding="utf-8")
-    ifp_orig = io.open("data.nosync/train.txt.src", mode="r", encoding="utf-8")
+    ifp_hl = io.open("data.nosync/" + data_split + ".txt.tgt", mode="r", encoding="utf-8")
+    ifp_orig = io.open("data.nosync/" + data_split + ".txt.src", mode="r", encoding="utf-8")
 
     x_orig, y_orig = dict(), dict()
 
