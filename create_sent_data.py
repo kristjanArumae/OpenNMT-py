@@ -89,11 +89,16 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
     rouge_counter = 0
     total_unused = 0
 
+    num_sent_used, num_w_used = [], []
+    used_art = set()
+
     for k, (a_ls, x_ls,  x_ls_r, y_ls, b_id) in enumerate(zip(attn_list, src_list, src_list_raw, tgt_list, batch_idx)):
         assert len(x_ls) == len(x_ls_r)
 
         if (k + 1) % 10000 == 0:
             print 'at doc', k, '/', total_d
+
+        assert b_id not in used_art
 
         try:
             x_o = x_orig[b_id]
@@ -101,6 +106,8 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
         except KeyError:
             print 'KeyError', k
             continue
+
+        used_art.add(b_id)
 
         most_used_idxs_map = get_most_used(a_ls, y_ls)
         doc = ' '.join(x_ls_r)
@@ -125,7 +132,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
         sentences_orig = sent_tokenize(x_o)
         token_idx = 0
 
-        num_used = 0
+        num_used, num_used_w = 0, 0
 
         for send_idx, (sent, sent_o) in enumerate(zip(sentences, sentences_orig)):
             total_in_sent = 0
@@ -190,6 +197,8 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
                 single_y.append(longest_span[0])
                 single_y.append(longest_span[1])
 
+                num_used_w += longest_span[1] - longest_span[0]
+
                 if data_split != 'train' and data_split != 'valid':
                     ofp_sys_sent.write(sent_o.encode('utf-8') + ' ')
                     ofp_sys_segm.write(' '.join(s_split_orig[longest_span[0]:longest_span[1]]).encode('utf-8') + ' ')
@@ -211,13 +220,17 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
             print k
             total_unused += 1
 
-        rouge_counter += 1
         if data_split != 'train' and data_split != 'valid':
             ofp_sys_segm.close()
             ofp_sys_sent.close()
 
+            rouge_counter += 1
+
         if ofp_html is not None:
             ofp_html.write('<p>')
+
+        num_sent_used.append(num_used)
+        num_w_used.append(num_used_w)
 
 
     json.dump(data, ofp_json)
@@ -228,6 +241,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
 
     print num_pos/float(len(data['y']) + 1.0), len(data['y']), len(data['x']), total_unused
     print np.median(len_ls), np.mean(len_ls)
+    print 'sent used', np.mean(num_sent_used), 'w used', np.mean(num_w_used)
 
 
 def reverse_batch(x, batch_idx_ls):
