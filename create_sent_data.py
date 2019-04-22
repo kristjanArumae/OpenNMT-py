@@ -114,7 +114,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
         if k < output_to_html:
             ofp_html.write('<p>##' + str(k) + '##</br>')
 
-        if data_split != 'train':
+        if data_split != 'train' and data_split != 'valid':
             ofp_mod = open(output_path_model + 'd_' + str(rouge_counter).zfill(6) + '.txt', 'w+')
             ofp_sys_sent = open(output_path_system_sent + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
             ofp_sys_segm = open(output_path_system_segm + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
@@ -190,7 +190,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
                 single_y.append(longest_span[0])
                 single_y.append(longest_span[1])
 
-                if data_split != 'train':
+                if data_split != 'train' and data_split != 'valid':
                     ofp_sys_sent.write(sent_o.encode('utf-8') + ' ')
                     ofp_sys_segm.write(' '.join(s_split_orig[longest_span[0]:longest_span[1]]).encode('utf-8') + ' ')
 
@@ -208,10 +208,11 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=5):
             len_ls.append(len(data['x'][-1].split()))
 
         if num_used == 0:
+            print k
             total_unused += 1
 
         rouge_counter += 1
-        if data_split != 'train':
+        if data_split != 'train' and data_split != 'valid':
             ofp_sys_segm.close()
             ofp_sys_sent.close()
 
