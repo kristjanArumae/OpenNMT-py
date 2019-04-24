@@ -198,10 +198,10 @@ def create_iterator(max_len=30, max_size=-1):
                                       torch.tensor(all_sent_labels[:val_split], dtype=torch.long),
                                       torch.tensor(all_segment_ids[:val_split], dtype=torch.long))
 
-    return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=128),  DataLoader(tensor_data_valid, batch_size=128), len(y_ls)
+    return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=128),  DataLoader(tensor_data_valid, batch_size=128), len(num_t)
 
 
-def train(model, loader_train, loader_valid, num_examples, num_train_epochs=100):
+def train(model, loader_train, loader_valid, num_examples, num_train_epochs=5):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     num_train_optimization_steps = int(num_examples / 128)
@@ -237,7 +237,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=100)
             loss.backward()
             optimizer.step()
 
-            if (step + 1) % 100 == 0:
+            if (step + 1) % 5000 == 0:
                 loss_ls.append(float(loss.cpu().data.numpy()))
                 loss_ls_s.append(float(loss_s.cpu().data.numpy()))
                 loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
@@ -268,7 +268,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=100)
                         plt.plot([i for i in range(len(loss_ls))], loss_ls_v, '-', label="valid", linewidth=1)
 
                         plt.legend(loc='best')
-                        plt.savefig('ranges2.png', dpi=400)
+                        plt.savefig('ranges_full.png', dpi=400)
 
                         return
                     else:
@@ -280,9 +280,9 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=100)
     plt.plot([i for i in range(len(loss_ls))], loss_ls_v, '-', label="valid", linewidth=1)
 
     plt.legend(loc='best')
-    plt.savefig('ranges2.png', dpi=400)
+    plt.savefig('ranges_full.png', dpi=400)
 
-loader_train_, loader_valid_, _n = create_iterator(max_size=20000)
+loader_train_, loader_valid_, _n = create_iterator()
 print('loaded data', _n)
 train(CustomNetwork.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, _n)
 
