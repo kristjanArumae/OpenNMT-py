@@ -95,7 +95,7 @@ def create_labels(data_split='test', output_to_html=-1, num_attn_files=1):
     for k, (a_ls, x_ls,  x_ls_r, y_ls, b_id) in enumerate(zip(attn_list, src_list, src_list_raw, tgt_list, batch_idx)):
         assert len(x_ls) == len(x_ls_r)
 
-        if (k + 1) % 10000 == 0:
+        if (k + 1) % 50000 == 0:
             print 'at doc', k, '/', total_d
 
         assert b_id not in used_art
@@ -217,7 +217,7 @@ def create_labels(data_split='test', output_to_html=-1, num_attn_files=1):
             len_ls.append(len(data['x'][-1].split()))
 
         if num_used == 0:
-            print k
+            # print k
             total_unused += 1
 
         if data_split != 'train' and data_split != 'valid':

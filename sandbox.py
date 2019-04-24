@@ -10,6 +10,7 @@ from tqdm import tqdm, trange
 
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 
 class CustomNetwork(BertPreTrainedModel):
@@ -17,16 +18,16 @@ class CustomNetwork(BertPreTrainedModel):
         super(CustomNetwork, self).__init__(config)
 
         self.num_labels = num_labels
-        # config.type_vocab_size = config.max_position_embeddings
+        config.type_vocab_size = config.max_position_embeddings
         self.bert = BertModel(config)
+        self.apply(self.init_bert_weights)
 
         self.dropout_qa = nn.Dropout(config.hidden_dropout_prob)
         self.dropout_s = nn.Dropout(config.hidden_dropout_prob)
-
         self.classifier = nn.Linear(config.hidden_size, num_labels)
-
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
-        self.apply(self.init_bert_weights)
+
+        print('model loaded')
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, start_positions=None, end_positions=None, weights=None):
         sequence_output, pooled_output = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
@@ -220,12 +221,13 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=100)
     loss_ls, loss_ls_s, loss_ls_qa, loss_ls_v = [], [], [], []
     best_loss = 100.0
     unchanged = 0
-    unchanged_limit=30
+    unchanged_limit=15
 
     weights = torch.tensor([0.01, 1.0], dtype=torch.float32).to(device)
 
     for _ in trange(num_train_epochs, desc="Epoch"):
         for step, batch in enumerate(tqdm(loader_train, desc="Iteration")):
+            optimizer.zero_grad()
 
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch
@@ -234,9 +236,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=100)
 
             loss.backward()
             optimizer.step()
-            optimizer.zero_grad()
 
-            if (step + 1) % 1000 == 0:
+            if (step + 1) % 100 == 0:
                 loss_ls.append(float(loss.cpu().data.numpy()))
                 loss_ls_s.append(float(loss_s.cpu().data.numpy()))
                 loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
@@ -248,9 +249,9 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=100)
                         batch_valid = tuple(t2.to(device) for t2 in batch_valid)
 
                         input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch_valid
-                        loss_, _, _ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, None)
+                        loss_, _, _ = model(input_ids, None, input_mask, sent_labels, start_positions, end_position, weights)
 
-                        loss_valid.append(loss.cpu().data.numpy())
+                        loss_valid.append(loss_.cpu().data.numpy())
 
                     loss_mean, loss_std = np.mean(loss_valid), np.std(loss_valid)
 
@@ -281,10 +282,9 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=100)
     plt.legend(loc='best')
     plt.savefig('ranges2.png', dpi=400)
 
-loader_train_, loader_valid_, n = create_iterator()
-print('loaded data')
-
-train(CustomNetwork.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, n)
+loader_train_, loader_valid_, _n = create_iterator()
+print('loaded data', _n)
+train(CustomNetwork.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, _n)
 
 
 
