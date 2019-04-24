@@ -198,7 +198,7 @@ def create_iterator(max_len=30, max_size=-1):
                                       torch.tensor(all_sent_labels[:val_split], dtype=torch.long),
                                       torch.tensor(all_segment_ids[:val_split], dtype=torch.long))
 
-    return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=128),  DataLoader(tensor_data_valid, batch_size=128), len(num_t)
+    return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=128),  DataLoader(tensor_data_valid, batch_size=128), num_t
 
 
 def train(model, loader_train, loader_valid, num_examples, num_train_epochs=5):
