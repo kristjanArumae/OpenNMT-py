@@ -282,7 +282,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=100)
     plt.legend(loc='best')
     plt.savefig('ranges2.png', dpi=400)
 
-loader_train_, loader_valid_, _n = create_iterator()
+loader_train_, loader_valid_, _n = create_iterator(max_size=20000)
 print('loaded data', _n)
 train(CustomNetwork.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, _n)
 
