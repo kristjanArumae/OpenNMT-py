@@ -30,8 +30,7 @@ class CustomNetwork(BertPreTrainedModel):
 
         print('model loaded')
 
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, start_positions=None,
-                end_positions=None, weights=None):
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, start_positions=None,end_positions=None, weights=None):
         sequence_output, pooled_output = self.bert(input_ids, token_type_ids, attention_mask,
                                                    output_all_encoded_layers=False)
 
@@ -286,7 +285,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
 
             # loss = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position,
             #                              weights)
-
+            # forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, start_positions=None,end_positions=None, weights=None):
             loss.backward()
             optimizer.step()
 
@@ -303,13 +302,13 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                         batch_valid = tuple(t2.to(device) for t2 in batch_valid)
 
                         input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch_valid
-                        start_l, end_l, sent_l = model(input_ids, seg_ids, input_mask, sent_labels, None, weights)
+                        start_l, end_l, sent_l = model(input_ids, seg_ids, input_mask, sent_labels, None, None, None)
                         # sent_l = model(input_ids, seg_ids, input_mask, None, None, None)
 
                         eval_gt_start.extend(start_positions.cpu().data.numpy())
                         eval_gt_end.extend(end_position.cpu().data.numpy())
                         eval_gt_sent.extend(sent_labels.cpu().data.numpy())
-                        #
+
                         eval_sys_start.extend(start_l.cpu().data.numpy())
                         eval_sys_end.extend(end_l.cpu().data.numpy())
                         eval_sys_sent.extend(sent_l.cpu().data.numpy())
