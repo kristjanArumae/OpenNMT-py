@@ -221,27 +221,28 @@ def get_valid_evaluation(eval_gt_start,
     updated_eval_sys_start = []
     updated_eval_sys_end = []
 
-    for g, s in zip(eval_gt_start, eval_sys_start):
-        if g < ooi:
-            updated_eval_gt_start.append(g)
-            updated_eval_sys_start.append(s)
+    # for g, s in zip(eval_gt_start, eval_sys_start):
+    #     if g < ooi:
+    #         updated_eval_gt_start.append(g)
+    #         updated_eval_sys_start.append(s)
+    #
+    # for g, s in zip(eval_gt_end, eval_sys_end):
+    #     if g < ooi:
+    #         updated_eval_gt_end.append(g)
+    #         updated_eval_sys_end.append(s)
 
-    for g, s in zip(eval_gt_end, eval_sys_end):
-        if g < ooi:
-            updated_eval_gt_end.append(g)
-            updated_eval_sys_end.append(s)
-
-    start_f1 = f1_score(updated_eval_gt_start, np.argmax(updated_eval_sys_start, axis=1), average='micro')
-    end_f1 = f1_score(updated_eval_gt_end, np.argmax(updated_eval_sys_end, axis=1), average='micro')
+    # start_f1 = f1_score(updated_eval_gt_start, np.argmax(updated_eval_sys_start, axis=1), average='micro')
+    # end_f1 = f1_score(updated_eval_gt_end, np.argmax(updated_eval_sys_end, axis=1), average='micro')
 
     sent_f1 = f1_score(eval_gt_sent, np.argmax(eval_sys_sent, axis=1))
 
-    start_acc = accuracy_score(updated_eval_gt_start, np.argmax(updated_eval_sys_start, axis=1))
-    end_acc = accuracy_score(eval_gt_end, np.argmax(eval_sys_end, axis=1))
+    # start_acc = accuracy_score(updated_eval_gt_start, np.argmax(updated_eval_sys_start, axis=1))
+    # end_acc = accuracy_score(eval_gt_end, np.argmax(eval_sys_end, axis=1))
 
     acc_sent = accuracy_score(eval_gt_sent, np.argmax(eval_sys_sent, axis=1))
 
-    return (start_acc + end_acc) / 2.0, (start_f1 + end_f1) / 2.0, acc_sent, sent_f1
+    # return (start_acc + end_acc) / 2.0, (start_f1 + end_f1) / 2.0, acc_sent, sent_f1
+    return acc_sent, sent_f1
 
 
 def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
@@ -312,7 +313,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                         # eval_sys_end.extend(end_l.cpu().data.numpy())
                         eval_sys_sent.extend(sent_l.cpu().data.numpy())
 
-                    qa_acc_val, qa_f1_val, sent_acc_val, sent_f1_val = get_valid_evaluation(eval_gt_start,
+                    sent_acc_val, sent_f1_val = get_valid_evaluation(eval_gt_start,
                                                                                             eval_gt_end,
                                                                                             eval_gt_sent,
                                                                                             eval_sys_start,
