@@ -141,6 +141,7 @@ class CustomNetworkSent(BertPreTrainedModel):
 
 def create_iterator(max_len=30, max_size=-1):
     ifp = open('data.nosync/train/cnndm_labeled_tokenized.json', 'rb')
+
     data = json.load(ifp)
 
     ifp.close()
@@ -280,10 +281,10 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch
 
-            # loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position,
+            # loss, loss_s, loss_q = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position,
             #                              weights)
 
-            loss = model(input_ids, None, input_mask, sent_labels, start_positions, end_position,
+            loss = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position,
                                          weights)
 
             loss.backward()
@@ -303,7 +304,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
 
                         input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch_valid
                         # start_l, end_l, sent_l = model(input_ids, None, input_mask, sent_labels, None, None)
-                        sent_l = model(input_ids, None, input_mask, None, None, None)
+                        sent_l = model(input_ids, seg_ids, input_mask, None, None, None)
 
                         # eval_gt_start.extend(start_positions.cpu().data.numpy())
                         # eval_gt_end.extend(end_position.cpu().data.numpy())
