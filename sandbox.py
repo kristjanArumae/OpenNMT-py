@@ -325,7 +325,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                     sent_f1.append(sent_f1_val)
 
                     if sent_f1_val > valid_f1:
-                        valid_f1 = qa_f1_val + sent_f1_val
+                        valid_f1 = sent_f1_val
                         unchanged = 0
 
                         torch.save(model.state_dict(), ofp_model)
