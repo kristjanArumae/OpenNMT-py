@@ -270,7 +270,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
     unchanged = 0
     unchanged_limit = 10
 
-    # weights = torch.tensor([0.01, 1.0], dtype=torch.float32).to(device)
+    weights = torch.tensor([0.01, 1.0], dtype=torch.float32).to(device)
 
     for _ in trange(num_train_epochs, desc="Epoch"):
         for step, batch in enumerate(tqdm(loader_train, desc="Iteration")):
@@ -280,7 +280,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
             input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch
 
             loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position,
-                                         None)
+                                         weights)
 
             loss.backward()
             optimizer.step()
