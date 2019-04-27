@@ -222,28 +222,28 @@ def get_valid_evaluation(eval_gt_start,
     updated_eval_sys_start = []
     updated_eval_sys_end = []
 
-    # for g, s in zip(eval_gt_start, eval_sys_start):
-    #     if g < ooi:
-    #         updated_eval_gt_start.append(g)
-    #         updated_eval_sys_start.append(s)
-    #
-    # for g, s in zip(eval_gt_end, eval_sys_end):
-    #     if g < ooi:
-    #         updated_eval_gt_end.append(g)
-    #         updated_eval_sys_end.append(s)
+    for g, s in zip(eval_gt_start, eval_sys_start):
+        if g < ooi:
+            updated_eval_gt_start.append(g)
+            updated_eval_sys_start.append(s)
 
-    # start_f1 = f1_score(updated_eval_gt_start, np.argmax(updated_eval_sys_start, axis=1), average='micro')
-    # end_f1 = f1_score(updated_eval_gt_end, np.argmax(updated_eval_sys_end, axis=1), average='micro')
+    for g, s in zip(eval_gt_end, eval_sys_end):
+        if g < ooi:
+            updated_eval_gt_end.append(g)
+            updated_eval_sys_end.append(s)
+
+    start_f1 = f1_score(updated_eval_gt_start, np.argmax(updated_eval_sys_start, axis=1), average='micro')
+    end_f1 = f1_score(updated_eval_gt_end, np.argmax(updated_eval_sys_end, axis=1), average='micro')
 
     sent_f1 = f1_score(eval_gt_sent, np.argmax(eval_sys_sent, axis=1))
 
-    # start_acc = accuracy_score(updated_eval_gt_start, np.argmax(updated_eval_sys_start, axis=1))
-    # end_acc = accuracy_score(eval_gt_end, np.argmax(eval_sys_end, axis=1))
+    start_acc = accuracy_score(updated_eval_gt_start, np.argmax(updated_eval_sys_start, axis=1))
+    end_acc = accuracy_score(eval_gt_end, np.argmax(eval_sys_end, axis=1))
 
     acc_sent = accuracy_score(eval_gt_sent, np.argmax(eval_sys_sent, axis=1))
 
-    # return (start_acc + end_acc) / 2.0, (start_f1 + end_f1) / 2.0, acc_sent, sent_f1
-    return acc_sent, sent_f1
+    return (start_acc + end_acc) / 2.0, (start_f1 + end_f1) / 2.0, acc_sent, sent_f1
+    # return acc_sent, sent_f1
 
 
 def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
@@ -281,19 +281,19 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch
 
-            # loss, loss_s, loss_q = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position,
-            #                              weights)
-
-            loss = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position,
+            loss, loss_s, loss_q = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position,
                                          weights)
+
+            # loss = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position,
+            #                              weights)
 
             loss.backward()
             optimizer.step()
 
             if (step + 1) % 300 == 0:
                 loss_ls.append(float(loss.cpu().data.numpy()))
-                # loss_ls_s.append(float(loss_s.cpu().data.numpy()))
-                # loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
+                loss_ls_s.append(float(loss_s.cpu().data.numpy()))
+                loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
 
                 with torch.no_grad():
                     eval_gt_start, eval_gt_end, eval_gt_sent = [], [], []
@@ -303,30 +303,30 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                         batch_valid = tuple(t2.to(device) for t2 in batch_valid)
 
                         input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch_valid
-                        # start_l, end_l, sent_l = model(input_ids, None, input_mask, sent_labels, None, None)
-                        sent_l = model(input_ids, seg_ids, input_mask, None, None, None)
+                        start_l, end_l, sent_l = model(input_ids, seg_ids, input_mask, sent_labels, None, weights)
+                        # sent_l = model(input_ids, seg_ids, input_mask, None, None, None)
 
-                        # eval_gt_start.extend(start_positions.cpu().data.numpy())
-                        # eval_gt_end.extend(end_position.cpu().data.numpy())
+                        eval_gt_start.extend(start_positions.cpu().data.numpy())
+                        eval_gt_end.extend(end_position.cpu().data.numpy())
                         eval_gt_sent.extend(sent_labels.cpu().data.numpy())
                         #
-                        # eval_sys_start.extend(start_l.cpu().data.numpy())
-                        # eval_sys_end.extend(end_l.cpu().data.numpy())
+                        eval_sys_start.extend(start_l.cpu().data.numpy())
+                        eval_sys_end.extend(end_l.cpu().data.numpy())
                         eval_sys_sent.extend(sent_l.cpu().data.numpy())
 
-                    sent_acc_val, sent_f1_val = get_valid_evaluation(eval_gt_start,
+                    qa_acc_val, qa_f1_val, sent_acc_val, sent_f1_val = get_valid_evaluation(eval_gt_start,
                                                                                             eval_gt_end,
                                                                                             eval_gt_sent,
                                                                                             eval_sys_start,
                                                                                             eval_sys_end,
                                                                                             eval_sys_sent)
-                    # qa_acc.append(qa_acc_val)
-                    # qa_f1.append(qa_f1_val)
+                    qa_acc.append(qa_acc_val)
+                    qa_f1.append(qa_f1_val)
                     sent_acc.append(sent_acc_val)
                     sent_f1.append(sent_f1_val)
 
-                    if sent_f1_val > valid_f1:
-                        valid_f1 = sent_f1_val
+                    if sent_f1_val + qa_f1_val > valid_f1:
+                        valid_f1 = sent_f1_val + qa_f1_val
                         unchanged = 0
 
                         torch.save(model.state_dict(), ofp_model)
@@ -334,16 +334,16 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                     elif unchanged > unchanged_limit:
 
                         plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
-                        # plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
-                        # plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
+                        plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
+                        plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
 
                         plt.legend(loc='best')
                         plt.savefig('loss_model.png', dpi=400)
 
                         plt.clf()
 
-                        # plt.plot([i for i in range(len(qa_acc))], qa_acc, '-', label="qa acc", linewidth=1)
-                        # plt.plot([i for i in range(len(qa_acc))], qa_f1, '-', label="qa f1", linewidth=1)
+                        plt.plot([i for i in range(len(qa_acc))], qa_acc, '-', label="qa acc", linewidth=1)
+                        plt.plot([i for i in range(len(qa_acc))], qa_f1, '-', label="qa f1", linewidth=1)
                         plt.plot([i for i in range(len(sent_acc))], sent_acc, '-', label="sent acc", linewidth=1)
                         plt.plot([i for i in range(len(sent_f1))], sent_f1, '-', label="sent f1", linewidth=1)
 
@@ -355,16 +355,16 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                         unchanged += 1
 
     plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
-    # plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
-    # plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
+    plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
+    plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
 
     plt.legend(loc='best')
     plt.savefig('loss_model.png', dpi=400)
 
     plt.clf()
 
-    # plt.plot([i for i in range(len(qa_acc))], qa_acc, '-', label="qa acc", linewidth=1)
-    # plt.plot([i for i in range(len(qa_acc))], qa_f1, '-', label="qa f1", linewidth=1)
+    plt.plot([i for i in range(len(qa_acc))], qa_acc, '-', label="qa acc", linewidth=1)
+    plt.plot([i for i in range(len(qa_acc))], qa_f1, '-', label="qa f1", linewidth=1)
     plt.plot([i for i in range(len(sent_acc))], sent_acc, '-', label="sent acc", linewidth=1)
     plt.plot([i for i in range(len(sent_f1))], sent_f1, '-', label="sent f1", linewidth=1)
 
@@ -374,4 +374,4 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
 
 loader_train_, loader_valid_, _n = create_iterator(max_size=50000)
 print('loaded data', _n)
-train(CustomNetworkSent.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, _n)
+train(CustomNetwork.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, _n)
