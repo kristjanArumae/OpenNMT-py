@@ -42,7 +42,7 @@ def create_labels(data_split='test', output_to_html=-1, num_attn_files=1):
     if output_to_html > 0:
         ofp_html = open('data.nosync/' + data_split + '/cnndm.html', 'w+')
 
-    data = {'x': [], 'x_o': [], 'y': [], 's_id': []}
+    data = {'x': [], 'x_o': [], 'y': [], 's_id': [], 'rouge_id': []}
 
     print 'loading openNMT output'
     for i in xrange(num_attn_files):
@@ -213,6 +213,7 @@ def create_labels(data_split='test', output_to_html=-1, num_attn_files=1):
             data['x_o'].append(sent_o)
             data['y'].append(single_y)
             data['s_id'].append(send_idx)
+            data['batch_id'].append(b_id)
 
             len_ls.append(len(data['x'][-1].split()))
 
