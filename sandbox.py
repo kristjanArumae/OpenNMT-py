@@ -343,8 +343,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
 
                         # plt.plot([i for i in range(len(qa_acc))], qa_acc, '-', label="qa acc", linewidth=1)
                         # plt.plot([i for i in range(len(qa_acc))], qa_f1, '-', label="qa f1", linewidth=1)
-                        plt.plot([i for i in range(len(qa_acc))], sent_acc, '-', label="sent acc", linewidth=1)
-                        plt.plot([i for i in range(len(qa_acc))], sent_f1, '-', label="sent f1", linewidth=1)
+                        plt.plot([i for i in range(len(sent_acc))], sent_acc, '-', label="sent acc", linewidth=1)
+                        plt.plot([i for i in range(len(sent_f1))], sent_f1, '-', label="sent f1", linewidth=1)
 
                         plt.legend(loc='best')
                         plt.savefig('val_model.png', dpi=400)
@@ -364,8 +364,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
 
     # plt.plot([i for i in range(len(qa_acc))], qa_acc, '-', label="qa acc", linewidth=1)
     # plt.plot([i for i in range(len(qa_acc))], qa_f1, '-', label="qa f1", linewidth=1)
-    plt.plot([i for i in range(len(qa_acc))], sent_acc, '-', label="sent acc", linewidth=1)
-    plt.plot([i for i in range(len(qa_acc))], sent_f1, '-', label="sent f1", linewidth=1)
+    plt.plot([i for i in range(len(sent_acc))], sent_acc, '-', label="sent acc", linewidth=1)
+    plt.plot([i for i in range(len(sent_f1))], sent_f1, '-', label="sent f1", linewidth=1)
 
     plt.legend(loc='best')
     plt.savefig('val_model.png', dpi=400)
