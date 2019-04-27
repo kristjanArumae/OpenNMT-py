@@ -238,7 +238,7 @@ def get_valid_evaluation(eval_gt_start,
     sent_f1 = f1_score(eval_gt_sent, np.argmax(eval_sys_sent, axis=1))
 
     start_acc = accuracy_score(updated_eval_gt_start, np.argmax(updated_eval_sys_start, axis=1))
-    end_acc = accuracy_score(eval_gt_end, np.argmax(eval_sys_end, axis=1))
+    end_acc = accuracy_score(updated_eval_gt_end, np.argmax(updated_eval_sys_end, axis=1))
 
     acc_sent = accuracy_score(eval_gt_sent, np.argmax(eval_sys_sent, axis=1))
 
