@@ -72,7 +72,7 @@ class CustomNetwork(BertPreTrainedModel):
 
             return total_loss, loss_sent, loss_qa
         else:
-            return start_logits, end_logits, logits
+            return torch.nn.functional.softmax(start_logits), torch.nn.functional.softmax(end_logits), torch.nn.functional.softmax(logits)
 
 
 class CustomNetworkQA(BertPreTrainedModel):
@@ -234,7 +234,7 @@ def get_valid_evaluation(eval_gt_start,
     start_f1 = f1_score(updated_eval_gt_start, np.argmax(updated_eval_sys_start, axis=1), average='micro')
     end_f1 = f1_score(updated_eval_gt_end, np.argmax(updated_eval_sys_end, axis=1), average='micro')
 
-    sent_f1 = f1_score(eval_gt_sent, np.argmax(eval_sys_sent, axis=1), average='micro')
+    sent_f1 = f1_score(eval_gt_sent, np.argmax(eval_sys_sent, axis=1))
 
     start_acc = accuracy_score(updated_eval_gt_start, np.argmax(updated_eval_sys_start, axis=1))
     end_acc = accuracy_score(eval_gt_end, np.argmax(eval_sys_end, axis=1))
