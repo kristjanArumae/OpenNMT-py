@@ -268,9 +268,9 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
 
     valid_f1 = 0.0
     unchanged = 0
-    unchanged_limit = 5
+    unchanged_limit = 10
 
-    weights = torch.tensor([0.01, 1.0], dtype=torch.float32).to(device)
+    # weights = torch.tensor([0.01, 1.0], dtype=torch.float32).to(device)
 
     for _ in trange(num_train_epochs, desc="Epoch"):
         for step, batch in enumerate(tqdm(loader_train, desc="Iteration")):
@@ -298,7 +298,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                         batch_valid = tuple(t2.to(device) for t2 in batch_valid)
 
                         input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch_valid
-                        start_l, end_l, sent_l = model(input_ids, None, input_mask, sent_labels, None, None, weights)
+                        start_l, end_l, sent_l = model(input_ids, None, input_mask, sent_labels, None, None)
 
                         eval_gt_start.extend(start_positions.cpu().data.numpy())
                         eval_gt_end.extend(end_position.cpu().data.numpy())
