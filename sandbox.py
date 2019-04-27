@@ -118,7 +118,7 @@ class CustomNetworkSent(BertPreTrainedModel):
     def __init__(self, config, num_labels=2):
         super(CustomNetworkSent, self).__init__(config)
         self.num_labels = num_labels
-
+        config.type_vocab_size = config.max_position_embeddings
         self.bert = BertModel(config)
 
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
