@@ -213,7 +213,7 @@ def get_valid_evaluation(eval_gt_start,
                          eval_sys_start,
                          eval_sys_end,
                          eval_sys_sent):
-    ooi = len(eval_sys_sent[0])
+    ooi = len(eval_sys_end[0])
 
     updated_eval_gt_start = []
     updated_eval_gt_end = []
@@ -289,7 +289,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
             loss.backward()
             optimizer.step()
 
-            if (step + 1) % 300 == 0:
+            if (step + 1) % 1 == 0:
                 loss_ls.append(float(loss.cpu().data.numpy()))
                 loss_ls_s.append(float(loss_s.cpu().data.numpy()))
                 loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
@@ -371,6 +371,6 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
     plt.savefig('val_model.png', dpi=400)
 
 
-loader_train_, loader_valid_, _n = create_iterator(max_size=50000)
+loader_train_, loader_valid_, _n = create_iterator(max_size=1000)
 print('loaded data', _n)
 train(CustomNetwork.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, _n)
