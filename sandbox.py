@@ -280,7 +280,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
             input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch
 
             loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position,
-                                         weights)
+                                         None)
 
             loss.backward()
             optimizer.step()
