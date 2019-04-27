@@ -266,7 +266,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
     loss_ls, loss_ls_s, loss_ls_qa = [], [], []
     qa_acc, qa_f1, sent_acc, sent_f1 = [], [], [], []
 
-    best_loss = 100.0
+    valid_f1 = 0.0
     unchanged = 0
     unchanged_limit = 5
 
@@ -319,8 +319,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                     sent_acc.append(sent_acc_val)
                     sent_f1.append(sent_f1_val)
 
-                    if qa_f1_val + sent_f1_val < best_loss:
-                        best_loss = qa_f1_val + sent_f1_val
+                    if qa_f1_val + sent_f1_val > valid_f1:
+                        valid_f1 = qa_f1_val + sent_f1_val
                         unchanged = 0
 
                         torch.save(model.state_dict(), ofp_model)
