@@ -279,7 +279,10 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch
 
-            loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position,
+            # loss, loss_s, loss_q = model(input_ids, None, input_mask, sent_labels, start_positions, end_position,
+            #                              weights)
+
+            loss = model(input_ids, None, input_mask, sent_labels, start_positions, end_position,
                                          weights)
 
             loss.backward()
@@ -287,8 +290,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
 
             if (step + 1) % 300 == 0:
                 loss_ls.append(float(loss.cpu().data.numpy()))
-                loss_ls_s.append(float(loss_s.cpu().data.numpy()))
-                loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
+                # loss_ls_s.append(float(loss_s.cpu().data.numpy()))
+                # loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
 
                 with torch.no_grad():
                     eval_gt_start, eval_gt_end, eval_gt_sent = [], [], []
@@ -298,14 +301,15 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                         batch_valid = tuple(t2.to(device) for t2 in batch_valid)
 
                         input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch_valid
-                        start_l, end_l, sent_l = model(input_ids, None, input_mask, sent_labels, None, None)
+                        # start_l, end_l, sent_l = model(input_ids, None, input_mask, sent_labels, None, None)
+                        sent_l = model(input_ids, None, input_mask, sent_labels, None, None)
 
-                        eval_gt_start.extend(start_positions.cpu().data.numpy())
-                        eval_gt_end.extend(end_position.cpu().data.numpy())
+                        # eval_gt_start.extend(start_positions.cpu().data.numpy())
+                        # eval_gt_end.extend(end_position.cpu().data.numpy())
                         eval_gt_sent.extend(sent_labels.cpu().data.numpy())
-
-                        eval_sys_start.extend(start_l.cpu().data.numpy())
-                        eval_sys_end.extend(end_l.cpu().data.numpy())
+                        #
+                        # eval_sys_start.extend(start_l.cpu().data.numpy())
+                        # eval_sys_end.extend(end_l.cpu().data.numpy())
                         eval_sys_sent.extend(sent_l.cpu().data.numpy())
 
                     qa_acc_val, qa_f1_val, sent_acc_val, sent_f1_val = get_valid_evaluation(eval_gt_start,
@@ -314,12 +318,12 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                                                                                             eval_sys_start,
                                                                                             eval_sys_end,
                                                                                             eval_sys_sent)
-                    qa_acc.append(qa_acc_val)
-                    qa_f1.append(qa_f1_val)
+                    # qa_acc.append(qa_acc_val)
+                    # qa_f1.append(qa_f1_val)
                     sent_acc.append(sent_acc_val)
                     sent_f1.append(sent_f1_val)
 
-                    if qa_f1_val + sent_f1_val > valid_f1:
+                    if sent_f1_val > valid_f1:
                         valid_f1 = qa_f1_val + sent_f1_val
                         unchanged = 0
 
@@ -328,16 +332,16 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                     elif unchanged > unchanged_limit:
 
                         plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
-                        plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
-                        plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
+                        # plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
+                        # plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
 
                         plt.legend(loc='best')
                         plt.savefig('loss_model.png', dpi=400)
 
                         plt.clf()
 
-                        plt.plot([i for i in range(len(qa_acc))], qa_acc, '-', label="qa acc", linewidth=1)
-                        plt.plot([i for i in range(len(qa_acc))], qa_f1, '-', label="qa f1", linewidth=1)
+                        # plt.plot([i for i in range(len(qa_acc))], qa_acc, '-', label="qa acc", linewidth=1)
+                        # plt.plot([i for i in range(len(qa_acc))], qa_f1, '-', label="qa f1", linewidth=1)
                         plt.plot([i for i in range(len(qa_acc))], sent_acc, '-', label="sent acc", linewidth=1)
                         plt.plot([i for i in range(len(qa_acc))], sent_f1, '-', label="sent f1", linewidth=1)
 
@@ -349,16 +353,16 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                         unchanged += 1
 
     plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
-    plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
-    plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
+    # plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
+    # plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
 
     plt.legend(loc='best')
     plt.savefig('loss_model.png', dpi=400)
 
     plt.clf()
 
-    plt.plot([i for i in range(len(qa_acc))], qa_acc, '-', label="qa acc", linewidth=1)
-    plt.plot([i for i in range(len(qa_acc))], qa_f1, '-', label="qa f1", linewidth=1)
+    # plt.plot([i for i in range(len(qa_acc))], qa_acc, '-', label="qa acc", linewidth=1)
+    # plt.plot([i for i in range(len(qa_acc))], qa_f1, '-', label="qa f1", linewidth=1)
     plt.plot([i for i in range(len(qa_acc))], sent_acc, '-', label="sent acc", linewidth=1)
     plt.plot([i for i in range(len(qa_acc))], sent_f1, '-', label="sent f1", linewidth=1)
 
@@ -368,4 +372,4 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
 
 loader_train_, loader_valid_, _n = create_iterator(max_size=50000)
 print('loaded data', _n)
-train(CustomNetwork.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, _n)
+train(CustomNetworkSent.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, _n)
