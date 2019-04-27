@@ -213,7 +213,7 @@ def get_valid_evaluation(eval_gt_start,
                          eval_sys_start,
                          eval_sys_end,
                          eval_sys_sent):
-    ooi = len(eval_sys_start[0])
+    ooi = len(eval_gt_sent[0])
 
     updated_eval_gt_start = []
     updated_eval_gt_end = []
@@ -303,7 +303,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
 
                         input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch_valid
                         # start_l, end_l, sent_l = model(input_ids, None, input_mask, sent_labels, None, None)
-                        sent_l = model(input_ids, None, input_mask, sent_labels, None, None)
+                        sent_l = model(input_ids, None, input_mask, None, None, None)
 
                         # eval_gt_start.extend(start_positions.cpu().data.numpy())
                         # eval_gt_end.extend(end_position.cpu().data.numpy())
