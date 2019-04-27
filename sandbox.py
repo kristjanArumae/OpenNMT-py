@@ -213,7 +213,7 @@ def get_valid_evaluation(eval_gt_start,
                          eval_sys_start,
                          eval_sys_end,
                          eval_sys_sent):
-    ooi = len(eval_gt_sent[0])
+    ooi = len(eval_sys_sent[0])
 
     updated_eval_gt_start = []
     updated_eval_gt_end = []
