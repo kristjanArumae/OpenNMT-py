@@ -11,7 +11,7 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 
-def create_labels(data_split='test', output_to_html=-1, num_attn_files=1):
+def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
     ifp_v = open('vocab.json', 'rb')
 
     vocab_map = json.load(ifp_v)
@@ -42,13 +42,13 @@ def create_labels(data_split='test', output_to_html=-1, num_attn_files=1):
     if output_to_html > 0:
         ofp_html = open('data.nosync/' + data_split + '/cnndm.html', 'w+')
 
-    data = {'x': [], 'x_o': [], 'y': [], 's_id': [], 'rouge_id': []}
+    data = {'x': [], 'x_o': [], 'y': [], 's_id': [], 'batch_id': []}
 
     print 'loading openNMT output'
     for i in xrange(num_attn_files):
         print 'file', i + 1
 
-        ifp_model = open('stanford_attn_test' + str(i), 'rb')
+        ifp_model = open('stanford_attn_' + data_split + str(i), 'rb')
         ifp_data = np.load(ifp_model)
 
         for j, sample in enumerate(ifp_data):

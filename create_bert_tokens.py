@@ -1,8 +1,10 @@
 import json
+from random import uniform
+
 from pytorch_pretrained_bert import BertTokenizer
 
 
-def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subset=-1):
+def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subset=-1, balance=None):
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
     ifp = open('data.nosync/' + data_split + '/cnndm.json', 'rb')
@@ -18,8 +20,9 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
     sent_tokenized_ls = []
     updated_labels_ls = []
     updated_s_id_ls = []
+    updated_b_id_ls = []
 
-    for i, (sent, labels, sent_id) in enumerate(zip(data['x_o'], data['y'], data['s_id'])):
+    for i, (sent, labels, sent_id, batch_id) in enumerate(zip(data['x_o'], data['y'], data['s_id'], data['batch_id'])):
 
         if i == small_subset:
             break
@@ -79,12 +82,21 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
             ofp_html.write(' '.join(orig_str))
             ofp_html.write('</br>')
 
-        if labels[0] > 0:
-            updated_labels_ls.append([1, label_begin, label_end])
-        else:
+        if labels[0] < 1:
+            if balance is not None:
+                rand = uniform(0, 1)
+
+                if rand > balance:
+                    continue
+
             updated_labels_ls.append(labels)
+        else:
+            updated_labels_ls.append([1, label_begin, label_end])
+
 
         updated_s_id_ls.append(sent_id)
+        updated_b_id_ls.append(batch_id)
+
         sent_tokenized_ls.append([sent_tokenized_as_idx, sent_tokenized_as_tok])
 
     ofp = open('data.nosync/' + data_split + '/cnndm_labeled_tokenized.json', 'w+')
@@ -93,6 +105,7 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
     updated_data['x'] = sent_tokenized_ls
     updated_data['y'] = updated_labels_ls
     updated_data['s_id'] = updated_s_id_ls
+    updated_data['b_id'] = updated_b_id_ls
 
     print(len(updated_labels_ls))
 
@@ -104,4 +117,4 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
         ofp_html.close()
 
 
-tokenize_data(output_to_html=10000)
+tokenize_data(output_to_html=10000, balance=0.2)

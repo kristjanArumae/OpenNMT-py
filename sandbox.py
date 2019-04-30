@@ -65,9 +65,9 @@ class CustomNetwork(BertPreTrainedModel):
             start_loss = loss_fct_qa(start_logits, start_positions)
             end_loss = loss_fct_qa(end_logits, end_positions)
 
-            loss_qa = (start_loss + end_loss) / 10
+            loss_qa = start_loss + end_loss
 
-            total_loss = loss_qa + loss_sent
+            total_loss = 2.0 * loss_qa + loss_sent
 
             return total_loss, loss_sent, loss_qa
         else:
@@ -271,7 +271,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
     unchanged = 0
     unchanged_limit = 10
 
-    weights = torch.tensor([0.01, 1.0], dtype=torch.float32).to(device)
+    # weights = torch.tensor([0.01, 1.0], dtype=torch.float32).to(device)
+    weights= None
 
     for _ in trange(num_train_epochs, desc="Epoch"):
         for step, batch in enumerate(tqdm(loader_train, desc="Iteration")):
@@ -280,8 +281,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch
 
-            loss, loss_s, loss_q = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position,
-                                         weights)
+            loss, loss_s, loss_q = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position, weights)
 
             # loss = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position,
             #                              weights)
@@ -302,7 +302,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                         batch_valid = tuple(t2.to(device) for t2 in batch_valid)
 
                         input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch_valid
-                        start_l, end_l, sent_l = model(input_ids, seg_ids, input_mask, sent_labels, None, None, None)
+                        start_l, end_l, sent_l = model(input_ids, seg_ids, input_mask, None, None, None, None)
                         # sent_l = model(input_ids, seg_ids, input_mask, None, None, None)
 
                         eval_gt_start.extend(start_positions.cpu().data.numpy())
