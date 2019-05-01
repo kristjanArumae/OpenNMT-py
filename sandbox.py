@@ -10,6 +10,7 @@ from tqdm import tqdm, trange
 
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 from sklearn.metrics import f1_score, accuracy_score
 
@@ -57,21 +58,20 @@ class CustomNetwork(BertPreTrainedModel):
             start_positions.clamp_(0, ignored_index)
             end_positions.clamp_(0, ignored_index)
 
-            loss_fct_qa = nn.CrossEntropyLoss(ignore_index=ignored_index)
-            loss_fct_sent = nn.CrossEntropyLoss(weight=weights)
+            loss_fct = nn.CrossEntropyLoss(ignore_index=ignored_index)
 
-            loss_sent = loss_fct_sent(logits.view(-1, self.num_labels), labels.view(-1))
+            loss_sent = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
-            start_loss = loss_fct_qa(start_logits, start_positions)
-            end_loss = loss_fct_qa(end_logits, end_positions)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
 
-            loss_qa = start_loss + end_loss
+            loss_qa = (start_loss + end_loss) / 10.0
 
-            total_loss = 2.0 * loss_qa + loss_sent
+            total_loss = loss_qa + loss_sent
 
             return total_loss, loss_sent, loss_qa
         else:
-            return torch.nn.functional.softmax(start_logits), torch.nn.functional.softmax(end_logits), torch.nn.functional.softmax(logits)
+            return torch.nn.functional.softmax(start_logits, dim=-1), torch.nn.functional.softmax(end_logits, dim=-1), torch.nn.functional.softmax(logits, dim=-1)
 
 
 class CustomNetworkQA(BertPreTrainedModel):
@@ -140,12 +140,17 @@ class CustomNetworkSent(BertPreTrainedModel):
 
 def create_iterator(max_len=30, max_size=-1):
     ifp = open('data.nosync/train/cnndm_labeled_tokenized.json', 'rb')
+    rouge_model_path = 'data.nosync/train/small_model/'
+
+    if not os.path.exists(rouge_model_path):
+        os.mkdir(rouge_model_path)
 
     data = json.load(ifp)
 
     ifp.close()
 
-    x_ls, y_ls, s_idx_ls = data['x'], data['y'], data['s_id']
+    x_ls, y_ls, s_idx_ls, b_id_ls, rouge_dict, x_for_rouge = data['x'], data['y'], data['s_id'], data['b_id'], data[
+        'rouge'], data['x_orig']
 
     all_input_ids = []
     all_input_mask = []
@@ -153,9 +158,10 @@ def create_iterator(max_len=30, max_size=-1):
     all_start_positions = []
     all_end_positions = []
     all_sent_labels = []
+    batch_id_list = []
 
     num_t = 0
-    for (x, _), (label, start, end), s_id in zip(x_ls, y_ls, s_idx_ls):
+    for (x, _), (label, start, end), s_id, b_id in zip(x_ls, y_ls, s_idx_ls, b_id_ls):
 
         if start >= max_len or label == 0:
             label = 0
@@ -182,6 +188,8 @@ def create_iterator(max_len=30, max_size=-1):
         segment_id = [s_id] * max_len
 
         all_segment_ids.append(segment_id[:max_len])
+        batch_id_list.append(b_id)
+
         num_t += 1
 
         if num_t == max_size:
@@ -194,17 +202,35 @@ def create_iterator(max_len=30, max_size=-1):
                                       torch.tensor(all_start_positions[val_split:], dtype=torch.long),
                                       torch.tensor(all_end_positions[val_split:], dtype=torch.long),
                                       torch.tensor(all_sent_labels[val_split:], dtype=torch.long),
-                                      torch.tensor(all_segment_ids[val_split:], dtype=torch.long))
+                                      torch.tensor(all_segment_ids[val_split:], dtype=torch.long),
+                                      torch.tensor(batch_id_list[val_split:], dtype=torch.long))
 
     tensor_data_valid = TensorDataset(torch.tensor(all_input_ids[:val_split], dtype=torch.long),
                                       torch.tensor(all_input_mask[:val_split], dtype=torch.long),
                                       torch.tensor(all_start_positions[:val_split], dtype=torch.long),
                                       torch.tensor(all_end_positions[:val_split], dtype=torch.long),
                                       torch.tensor(all_sent_labels[:val_split], dtype=torch.long),
-                                      torch.tensor(all_segment_ids[:val_split], dtype=torch.long))
+                                      torch.tensor(all_segment_ids[:val_split], dtype=torch.long),
+                                      torch.tensor(batch_id_list[:val_split], dtype=torch.long))
+
+    used_b_id = dict()
+    rouge_counter = 0
+
+    for batch_id in batch_id_list[:val_split]:
+
+        if batch_id not in used_b_id:
+
+            y_text = rouge_dict[str(batch_id)]
+
+            ofp_rouge = open(rouge_model_path + 'm_' + str(rouge_counter).zfill(6) + '.txt', 'w+')
+            ofp_rouge.write(y_text)
+            ofp_rouge.close()
+
+            used_b_id[batch_id] = rouge_counter
+            rouge_counter += 1
 
     return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=128), DataLoader(
-        tensor_data_valid, batch_size=128), num_t
+        tensor_data_valid, batch_size=128), num_t, used_b_id, x_for_rouge[:val_split]
 
 
 def get_valid_evaluation(eval_gt_start,
@@ -245,23 +271,59 @@ def get_valid_evaluation(eval_gt_start,
     # return acc_sent, sent_f1
 
 
-def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
+def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, batch_ids):
+    rouge_sys_sent_path = 'data.nosync/train/small_sys_sent/'
+
+    ofp_rouge = None
+    cur_batch = -1
+
+    for x_o, sys_lbl, b_id in zip(x_for_rouge, eval_sys_sent, batch_ids):
+
+        if cur_batch != b_id:
+            cur_batch = b_id
+
+            if ofp_rouge is not None:
+                ofp_rouge.close()
+
+            ofp_rouge = open(rouge_sys_sent_path + 's_' + str(rouge_dict[cur_batch]).zfill(6) + '.txt', 'w+')
+
+            if sys_lbl[1] > sys_lbl[0]:
+                ofp_rouge.write(x_o)
+                ofp_rouge.write(' ')
+
+        elif sys_lbl[1] > sys_lbl[0]:
+            ofp_rouge.write(x_o)
+            ofp_rouge.write(' ')
+
+    ofp_rouge.close()
+
+
+
+def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50, rouge_dict=None, x_for_rouge=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    num_train_optimization_steps = int(num_examples / 128)
+    # num_train_optimization_steps = int(num_examples / 128)
 
     ofp_model = 'data.nosync/small_model.pt'
 
-    no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
+    rouge_sys_sent_path = 'data.nosync/train/small_sys_sent/'
+    rouge_sys_segs_path = 'data.nosync/train/small_sys_segs/'
 
-    param_optimizer = list(model.named_parameters())
+    if not os.path.exists(rouge_sys_sent_path):
+        os.mkdir(rouge_sys_sent_path)
+    if not os.path.exists(rouge_sys_segs_path):
+        os.mkdir(rouge_sys_segs_path)
 
-    optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
-        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
-    ]
+    # no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
 
-    optimizer = BertAdam(optimizer_grouped_parameters, lr=1e-05, warmup=0.1, t_total=num_train_optimization_steps)
+    # param_optimizer = list(model.named_parameters())
+
+    # optimizer_grouped_parameters = [
+    #     {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
+    #     {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+    # ]
+    optimizer = BertAdam(model.parameters(), lr=1e-05)
+
 
     model.train()
     loss_ls, loss_ls_s, loss_ls_qa = [], [], []
@@ -269,23 +331,20 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
 
     valid_f1 = 0.0
     unchanged = 0
-    unchanged_limit = 10
+    unchanged_limit = 20
 
     # weights = torch.tensor([0.01, 1.0], dtype=torch.float32).to(device)
-    weights= None
+    weights = None
 
     for _ in trange(num_train_epochs, desc="Epoch"):
         for step, batch in enumerate(tqdm(loader_train, desc="Iteration")):
             optimizer.zero_grad()
 
             batch = tuple(t.to(device) for t in batch)
-            input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch
+            input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids, _ = batch
 
             loss, loss_s, loss_q = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position, weights)
 
-            # loss = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position,
-            #                              weights)
-            # forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, start_positions=None,end_positions=None, weights=None):
             loss.backward()
             optimizer.step()
 
@@ -298,10 +357,11 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                     eval_gt_start, eval_gt_end, eval_gt_sent = [], [], []
                     eval_sys_start, eval_sys_end, eval_sys_sent = [], [], []
 
+                    batch_ids = []
                     for _, batch_valid in enumerate(tqdm(loader_valid, desc="Validation")):
                         batch_valid = tuple(t2.to(device) for t2 in batch_valid)
 
-                        input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids = batch_valid
+                        input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids, batch_id = batch_valid
                         start_l, end_l, sent_l = model(input_ids, seg_ids, input_mask, None, None, None, None)
                         # sent_l = model(input_ids, seg_ids, input_mask, None, None, None)
 
@@ -312,6 +372,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                         eval_sys_start.extend(start_l.cpu().data.numpy())
                         eval_sys_end.extend(end_l.cpu().data.numpy())
                         eval_sys_sent.extend(sent_l.cpu().data.numpy())
+
+                        batch_ids.extend(batch_id.cpu().data.numpy().tolist())
 
                     qa_acc_val, qa_f1_val, sent_acc_val, sent_f1_val = get_valid_evaluation(eval_gt_start,
                                                                                             eval_gt_end,
@@ -329,6 +391,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
                         unchanged = 0
 
                         torch.save(model.state_dict(), ofp_model)
+                        create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, batch_ids)
 
                     elif unchanged > unchanged_limit:
 
@@ -371,6 +434,13 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50):
     plt.savefig('val_model.png', dpi=400)
 
 
-loader_train_, loader_valid_, _n = create_iterator(max_size=50000)
+loader_train_, loader_valid_, _n, rouge_map, x_for_rouge = create_iterator(max_size=100000)
 print('loaded data', _n)
-train(CustomNetwork.from_pretrained('bert-base-uncased'), loader_train_, loader_valid_, _n)
+train(model=CustomNetwork.from_pretrained('bert-base-uncased'),
+      loader_train=loader_train_,
+      loader_valid=loader_valid_,
+      num_examples=_n,
+      num_train_epochs=50,
+      rouge_dict=rouge_map,
+      x_for_rouge=x_for_rouge)
+
