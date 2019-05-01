@@ -31,7 +31,7 @@ class CustomNetwork(BertPreTrainedModel):
 
         print('model loaded')
 
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, start_positions=None,end_positions=None, weights=None):
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, start_positions=None,end_positions=None, weights=None, train=False):
         sequence_output, pooled_output = self.bert(input_ids, token_type_ids, attention_mask,
                                                    output_all_encoded_layers=False)
 
@@ -46,7 +46,7 @@ class CustomNetwork(BertPreTrainedModel):
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
 
-        if start_positions is not None and end_positions is not None:
+        if train:
 
             if len(start_positions.size()) > 1:
                 start_positions = start_positions.squeeze(-1)
@@ -71,7 +71,18 @@ class CustomNetwork(BertPreTrainedModel):
 
             return total_loss, loss_sent, loss_qa
         else:
-            return torch.nn.functional.softmax(start_logits, dim=-1), torch.nn.functional.softmax(end_logits, dim=-1), torch.nn.functional.softmax(logits, dim=-1)
+            loss_fct = nn.CrossEntropyLoss(ignore_index=ignored_index)
+
+            loss_sent = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
+
+            loss_qa = (start_loss + end_loss) / 10.0
+
+            total_loss = loss_qa + loss_sent
+
+            return torch.nn.functional.softmax(start_logits, dim=-1), torch.nn.functional.softmax(end_logits, dim=-1), torch.nn.functional.softmax(logits, dim=-1), total_loss
 
 
 class CustomNetworkQA(BertPreTrainedModel):
@@ -298,7 +309,6 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, batch_ids):
     ofp_rouge.close()
 
 
-
 def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, rouge_dict=None, x_for_rouge=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -326,10 +336,10 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
 
     model.train()
-    loss_ls, loss_ls_s, loss_ls_qa = [], [], []
+    loss_ls, loss_ls_s, loss_ls_qa, loss_valid_ls = [], [], [], []
     qa_acc, qa_f1, sent_acc, sent_f1 = [], [], [], []
 
-    valid_f1 = 0.0
+    best_valid = 100.0
     unchanged = 0
     unchanged_limit = 30
 
@@ -343,7 +353,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids, _ = batch
 
-            loss, loss_s, loss_q = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position, weights)
+            loss, loss_s, loss_q = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position, weights, train=True)
 
             loss.backward()
             optimizer.step()
@@ -357,12 +367,14 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
                     eval_gt_start, eval_gt_end, eval_gt_sent = [], [], []
                     eval_sys_start, eval_sys_end, eval_sys_sent = [], [], []
 
+                    valid_ls = []
+
                     batch_ids = []
                     for _, batch_valid in enumerate(tqdm(loader_valid, desc="Validation")):
                         batch_valid = tuple(t2.to(device) for t2 in batch_valid)
 
                         input_ids, input_mask, start_positions, end_position, sent_labels, seg_ids, batch_id = batch_valid
-                        start_l, end_l, sent_l = model(input_ids, seg_ids, input_mask, None, None, None, None)
+                        start_l, end_l, sent_l, valid_l = model(input_ids, seg_ids, input_mask, sent_labels, start_positions, end_position, None)
                         # sent_l = model(input_ids, seg_ids, input_mask, None, None, None)
 
                         eval_gt_start.extend(start_positions.cpu().data.numpy())
@@ -375,22 +387,27 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
                         batch_ids.extend(batch_id.cpu().data.numpy().tolist())
 
+                        valid_ls.append(valid_l.cpu().data.numpy())
+
                     qa_acc_val, qa_f1_val, sent_acc_val, sent_f1_val = get_valid_evaluation(eval_gt_start,
                                                                                             eval_gt_end,
                                                                                             eval_gt_sent,
                                                                                             eval_sys_start,
                                                                                             eval_sys_end,
                                                                                             eval_sys_sent)
+
+                    avg_val_loss = np.mean(valid_ls)
+
                     qa_acc.append(qa_acc_val)
                     qa_f1.append(qa_f1_val)
                     sent_acc.append(sent_acc_val)
                     sent_f1.append(sent_f1_val)
+                    loss_valid_ls.append(avg_val_loss)
 
-                    if sent_f1_val + qa_f1_val > valid_f1:
-                        valid_f1 = sent_f1_val + qa_f1_val
+                    if avg_val_loss < best_valid:
+                        best_valid = avg_val_loss
                         unchanged = 0
 
-                        torch.save(model.state_dict(), ofp_model)
                         create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, batch_ids)
 
                     elif unchanged > unchanged_limit:
@@ -398,15 +415,16 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
                         plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
                         plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
                         plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
+                        plt.plot([i for i in range(len(loss_ls))], loss_valid_ls, '-', label="valid", linewidth=1)
 
                         plt.legend(loc='best')
                         plt.savefig('loss_model.png', dpi=400)
 
                         plt.clf()
 
-                        plt.plot([i for i in range(len(qa_acc))], qa_acc, '-', label="qa acc", linewidth=1)
+                        # plt.plot([i for i in range(len(qa_acc))], qa_acc, '-', label="qa acc", linewidth=1)
                         plt.plot([i for i in range(len(qa_acc))], qa_f1, '-', label="qa f1", linewidth=1)
-                        plt.plot([i for i in range(len(sent_acc))], sent_acc, '-', label="sent acc", linewidth=1)
+                        # plt.plot([i for i in range(len(sent_acc))], sent_acc, '-', label="sent acc", linewidth=1)
                         plt.plot([i for i in range(len(sent_f1))], sent_f1, '-', label="sent f1", linewidth=1)
 
                         plt.legend(loc='best')
@@ -419,19 +437,20 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
     plt.plot([i for i in range(len(loss_ls))], loss_ls_s, '-', label="sent", linewidth=1)
     plt.plot([i for i in range(len(loss_ls))], loss_ls_qa, '-', label="qa", linewidth=1)
+    plt.plot([i for i in range(len(loss_ls))], loss_valid_ls, '-', label="valid", linewidth=1)
 
     plt.legend(loc='best')
     plt.savefig('loss_model.png', dpi=400)
 
     plt.clf()
 
-    plt.plot([i for i in range(len(qa_acc))], qa_acc, '-', label="qa acc", linewidth=1)
+    # plt.plot([i for i in range(len(qa_acc))], qa_acc, '-', label="qa acc", linewidth=1)
     plt.plot([i for i in range(len(qa_acc))], qa_f1, '-', label="qa f1", linewidth=1)
-    plt.plot([i for i in range(len(sent_acc))], sent_acc, '-', label="sent acc", linewidth=1)
+    # plt.plot([i for i in range(len(sent_acc))], sent_acc, '-', label="sent acc", linewidth=1)
     plt.plot([i for i in range(len(sent_f1))], sent_f1, '-', label="sent f1", linewidth=1)
 
     plt.legend(loc='best')
-    plt.savefig('val_model.png', dpi=400)
+    plt.savefig('metrics_model.png', dpi=400)
 
 
 loader_train_, loader_valid_, _n, rouge_map, x_for_rouge = create_iterator(max_size=100000)
