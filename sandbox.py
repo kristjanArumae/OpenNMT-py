@@ -334,8 +334,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     # ]
     optimizer = BertAdam(model.parameters(), lr=1e-05)
 
-
     model.train()
+
     loss_ls, loss_ls_s, loss_ls_qa, loss_valid_ls = [], [], [], []
     qa_acc, qa_f1, sent_acc, sent_f1 = [], [], [], []
 
