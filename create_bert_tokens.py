@@ -21,6 +21,7 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
     updated_labels_ls = []
     updated_s_id_ls = []
     updated_b_id_ls = []
+    sent_orig_ls = []
 
     total = 0
     total_o = 0
@@ -105,6 +106,7 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
         updated_b_id_ls.append(batch_id)
 
         sent_tokenized_ls.append([sent_tokenized_as_idx, sent_tokenized_as_tok])
+        sent_orig_ls.append(sent)
 
         total += 1
 
@@ -112,9 +114,11 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
 
     updated_data = dict()
     updated_data['x'] = sent_tokenized_ls
+    updated_data['x_orig'] = sent_orig_ls
     updated_data['y'] = updated_labels_ls
     updated_data['s_id'] = updated_s_id_ls
     updated_data['b_id'] = updated_b_id_ls
+    updated_data['rouge'] = data['rouge']
 
     print('original total : ', total_o)
 

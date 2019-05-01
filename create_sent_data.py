@@ -42,7 +42,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
     if output_to_html > 0:
         ofp_html = open('data.nosync/' + data_split + '/cnndm.html', 'w+')
 
-    data = {'x': [], 'x_o': [], 'y': [], 's_id': [], 'batch_id': []}
+    data = {'x': [], 'x_o': [], 'y': [], 's_id': [], 'batch_id': [], 'rouge': dict()}
 
     print 'loading openNMT output'
     for i in xrange(num_attn_files):
@@ -121,7 +121,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
         if k < output_to_html:
             ofp_html.write('<p>##' + str(k) + '##</br>')
 
-        if data_split != 'train' and data_split != 'valid':
+        if data_split != 'train':
             ofp_mod = open(output_path_model + 'd_' + str(rouge_counter).zfill(6) + '.txt', 'w+')
             ofp_sys_sent = open(output_path_system_sent + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
             ofp_sys_segm = open(output_path_system_segm + 'sum.' + str(rouge_counter).zfill(6) + '.txt', 'w+')
@@ -133,6 +133,8 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
         token_idx = 0
 
         num_used, num_used_w = 0, 0
+
+        data['rouge'][b_id] = y_o.encode('utf-8').replace('<t>', '').replace('</t>', '')
 
         for send_idx, (sent, sent_o) in enumerate(zip(sentences, sentences_orig)):
             total_in_sent = 0
@@ -199,7 +201,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
 
                 num_used_w += longest_span[1] - longest_span[0]
 
-                if data_split != 'train' and data_split != 'valid':
+                if data_split != 'train':
                     ofp_sys_sent.write(sent_o.encode('utf-8') + ' ')
                     ofp_sys_segm.write(' '.join(s_split_orig[longest_span[0]:longest_span[1]]).encode('utf-8') + ' ')
 
@@ -221,7 +223,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
             # print k
             total_unused += 1
 
-        if data_split != 'train' and data_split != 'valid':
+        if data_split != 'train':
             ofp_sys_segm.close()
             ofp_sys_sent.close()
 
