@@ -299,7 +299,7 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, batch_ids):
 
 
 
-def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50, rouge_dict=None, x_for_rouge=None):
+def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, rouge_dict=None, x_for_rouge=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     # num_train_optimization_steps = int(num_examples / 128)
@@ -331,7 +331,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=50, 
 
     valid_f1 = 0.0
     unchanged = 0
-    unchanged_limit = 20
+    unchanged_limit = 30
 
     # weights = torch.tensor([0.01, 1.0], dtype=torch.float32).to(device)
     weights = None
@@ -440,7 +440,7 @@ train(model=CustomNetwork.from_pretrained('bert-base-uncased'),
       loader_train=loader_train_,
       loader_valid=loader_valid_,
       num_examples=_n,
-      num_train_epochs=50,
+      num_train_epochs=75,
       rouge_dict=rouge_map,
       x_for_rouge=x_for_rouge)
 
