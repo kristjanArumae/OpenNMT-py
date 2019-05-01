@@ -71,6 +71,8 @@ class CustomNetwork(BertPreTrainedModel):
 
             return total_loss, loss_sent, loss_qa
         else:
+            ignored_index = start_logits.size(1)
+
             loss_fct = nn.CrossEntropyLoss(ignore_index=ignored_index)
 
             loss_sent = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
