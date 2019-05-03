@@ -345,8 +345,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     unchanged = 0
     unchanged_limit = 30
 
-    # weights = torch.tensor([0.01, 1.0], dtype=torch.float32).to(device)
-    weights = None
+    weights = torch.tensor([0.1, 1.0], dtype=torch.float32).to(device)
+    # weights = None
 
     for _ in trange(num_train_epochs, desc="Epoch"):
         for step, batch in enumerate(tqdm(loader_train, desc="Iteration")):
