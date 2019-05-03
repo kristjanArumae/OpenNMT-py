@@ -290,25 +290,47 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, batch_ids):
     ofp_rouge = None
     cur_batch = -1
 
+    used_set = set()
+
+    total_s = 0
+    total_used = 0
+    cur_used = 0
+    cur_used_ls = []
+
     for x_o, sys_lbl, b_id in zip(x_for_rouge, eval_sys_sent, batch_ids):
+        total_s += 1
+        assert b_id not in used_set
 
         if cur_batch != b_id:
+
+            used_set.add(cur_batch)
             cur_batch = b_id
 
             if ofp_rouge is not None:
                 ofp_rouge.close()
 
             ofp_rouge = open(rouge_sys_sent_path + 's_' + str(rouge_dict[cur_batch]).zfill(6) + '.txt', 'w+')
+            cur_used_ls.append(cur_used)
+            cur_used = 0
 
             if sys_lbl[1] > sys_lbl[0]:
                 ofp_rouge.write(x_o)
                 ofp_rouge.write(' ')
 
+                total_used += 1
+                cur_used += 1
+
         elif sys_lbl[1] > sys_lbl[0]:
             ofp_rouge.write(x_o)
             ofp_rouge.write(' ')
 
+            total_used += 1
+            cur_used += 1
+
     ofp_rouge.close()
+
+    print('Sent used:', total_used, '/', total_s, total_used/float(total_s))
+    print('Avg len (sent)', np.mean(cur_used_ls))
 
 
 def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, rouge_dict=None, x_for_rouge=None):
