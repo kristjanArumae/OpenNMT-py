@@ -22,6 +22,7 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
     updated_s_id_ls = []
     updated_b_id_ls = []
     sent_orig_ls = []
+    sent_align_ls = []
 
     total = 0
     total_o = 0
@@ -41,9 +42,10 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
 
         sent_tokenized_as_idx = []
         sent_tokenized_as_tok = []
+        sent_align = []
         moving_idx = 0
 
-        for _, word in enumerate(word_ls):
+        for j, word in enumerate(word_ls):
             if moving_idx >= label_begin and location == 0:
                 location += 1
             elif moving_idx > label_end and location == 1:
@@ -52,6 +54,8 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
             tok = tokenizer.tokenize(word)
             x = tokenizer.convert_tokens_to_ids(tok)
             len_x = len(x)
+
+            sent_align.extend([j] * len_x)
 
             if len_x > 1:
                 move_amt = len_x - 1
@@ -101,7 +105,7 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
             updated_labels_ls.append([1, label_begin, label_end])
             pos_lbl += 1
 
-
+        sent_align_ls.append(sent_align)
         updated_s_id_ls.append(sent_id)
         updated_b_id_ls.append(batch_id)
 
@@ -115,6 +119,7 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
     updated_data = dict()
     updated_data['x'] = sent_tokenized_ls
     updated_data['x_orig'] = sent_orig_ls
+    updated_data['x_align'] = sent_align_ls
     updated_data['y'] = updated_labels_ls
     updated_data['s_id'] = updated_s_id_ls
     updated_data['b_id'] = updated_b_id_ls
