@@ -341,6 +341,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     loss_ls, loss_ls_s, loss_ls_qa, loss_valid_ls = [], [], [], []
     qa_acc, qa_f1, sent_acc, sent_f1 = [], [], [], []
 
+    acc_loss, acc_loss_s, acc_loss_qa = [], [], []
+
     best_valid = 100.0
     unchanged = 0
     unchanged_limit = 30
@@ -360,10 +362,16 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
             loss.backward()
             optimizer.step()
 
-            if (step + 1) % 300 == 0:
-                loss_ls.append(float(loss.cpu().data.numpy()))
-                loss_ls_s.append(float(loss_s.cpu().data.numpy()))
-                loss_ls_qa.append(float(loss_q.cpu().data.numpy()))
+            acc_loss.append(loss.cpu().data.numpy())
+            acc_loss_s.append(loss_s.cpu().data.numpy())
+            acc_loss_qa.append(loss_q.cpu().data.numpy())
+
+            if (step + 1) % 100 == 0:
+                loss_ls.append(np.mean(acc_loss))
+                loss_ls_s.append(np.mean(acc_loss_s))
+                loss_ls_qa.append(np.mean(acc_loss_qa))
+
+                acc_loss, acc_loss_s, acc_loss_qa = [], [], []
 
                 with torch.no_grad():
                     eval_gt_start, eval_gt_end, eval_gt_sent = [], [], []
