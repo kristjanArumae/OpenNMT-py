@@ -162,8 +162,8 @@ def create_iterator(max_len=30, max_size=-1):
 
     ifp.close()
 
-    x_ls, y_ls, s_idx_ls, b_id_ls, rouge_dict, x_for_rouge = data['x'], data['y'], data['s_id'], data['b_id'], data[
-        'rouge'], data['x_orig']
+    x_ls, y_ls, s_idx_ls, b_id_ls, rouge_dict, x_for_rouge, x_align = data['x'], data['y'], data['s_id'], data['b_id'], data[
+        'rouge'], data['x_orig'], data['x_align']
 
     all_input_ids = []
     all_input_mask = []
@@ -171,10 +171,11 @@ def create_iterator(max_len=30, max_size=-1):
     all_start_positions = []
     all_end_positions = []
     all_sent_labels = []
+    all_sent_align = []
     batch_id_list = []
 
     num_t = 0
-    for (x, _), (label, start, end), s_id, b_id in zip(x_ls, y_ls, s_idx_ls, b_id_ls):
+    for (x, _), (label, start, end), s_id, b_id, x_a in zip(x_ls, y_ls, s_idx_ls, b_id_ls, x_align):
 
         if start >= max_len or label == 0:
             label = 0
@@ -202,6 +203,7 @@ def create_iterator(max_len=30, max_size=-1):
 
         all_segment_ids.append(segment_id[:max_len])
         batch_id_list.append(b_id)
+        all_sent_align.append(x_a)
 
         num_t += 1
 
@@ -243,7 +245,7 @@ def create_iterator(max_len=30, max_size=-1):
             rouge_counter += 1
 
     return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=128), DataLoader(
-        tensor_data_valid, batch_size=128), num_t, used_b_id, x_for_rouge[:val_split]
+        tensor_data_valid, batch_size=128), num_t, used_b_id, x_for_rouge[:val_split], all_sent_align[:val_split]
 
 
 def get_valid_evaluation(eval_gt_start,
@@ -284,10 +286,12 @@ def get_valid_evaluation(eval_gt_start,
     # return acc_sent, sent_f1
 
 
-def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, batch_ids):
-    rouge_sys_sent_path = 'data.nosync/train/small_sys_sent/'
+def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, eval_sys_end, batch_ids, align_ls,
+                       rouge_sys_sent_path, rouge_sys_segs_path):
 
-    ofp_rouge = None
+    ofp_rouge_sent = None
+    ofp_rouge_segm = None
+
     cur_batch = -1
 
     used_set = set()
@@ -297,45 +301,71 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, batch_ids):
     cur_used = 0
     cur_used_ls = []
 
-    for x_o, sys_lbl, b_id in zip(x_for_rouge, eval_sys_sent, batch_ids):
+    uesd_seg_len = []
+
+    for x_o, sys_lbl_s, sys_lbl_qa_start, sys_lbl_qa_end, b_id, x_a in zip(x_for_rouge, eval_sys_sent, eval_sys_start,
+                                                                           eval_sys_end, batch_ids, align_ls):
         total_s += 1
         assert b_id not in used_set
+
+        start_idx = min(np.argmax(sys_lbl_qa_start), x_a[-1])
+        end_idx = min(np.argmax(sys_lbl_qa_end), x_a[-1])
+
+        if end_idx < start_idx:
+            end_idx = min(np.argmax(sys_lbl_qa_start[start_idx:]), x_a[-1])
+
+        start_idx_aligned = x_a[start_idx]
+        end_idx_aligned = x_a[end_idx]
 
         if cur_batch != b_id:
 
             used_set.add(cur_batch)
             cur_batch = b_id
 
-            if ofp_rouge is not None:
-                ofp_rouge.close()
+            if ofp_rouge_sent is not None:
+                ofp_rouge_sent.close()
+                ofp_rouge_segm.close()
 
-            ofp_rouge = open(rouge_sys_sent_path + 's_' + str(rouge_dict[cur_batch]).zfill(6) + '.txt', 'w+')
+            ofp_rouge_sent = open(rouge_sys_sent_path + 's_' + str(rouge_dict[cur_batch]).zfill(6) + '.txt', 'w+')
+            ofp_rouge_segm = open(rouge_sys_segs_path + 's_' + str(rouge_dict[cur_batch]).zfill(6) + '.txt', 'w+')
+
             cur_used_ls.append(cur_used)
             cur_used = 0
 
-            if sys_lbl[1] > sys_lbl[0]:
-                ofp_rouge.write(x_o)
-                ofp_rouge.write(' ')
+            if sys_lbl_s[1] > sys_lbl_s[0]:
+                ofp_rouge_sent.write(x_o)
+                ofp_rouge_segm.write(x_o[start_idx_aligned:end_idx_aligned + 1])
+
+                ofp_rouge_sent.write(' ')
+                ofp_rouge_segm.write(' ')
 
                 total_used += 1
                 cur_used += 1
 
-        elif sys_lbl[1] > sys_lbl[0]:
-            ofp_rouge.write(x_o)
-            ofp_rouge.write(' ')
+                uesd_seg_len.append(end_idx_aligned - start_idx_aligned)
+
+        elif sys_lbl_s[1] > sys_lbl_s[0]:
+            ofp_rouge_sent.write(x_o)
+            ofp_rouge_segm.write(x_o[start_idx_aligned:end_idx_aligned + 1])
+
+            ofp_rouge_sent.write(' ')
+            ofp_rouge_segm.write(' ')
 
             total_used += 1
             cur_used += 1
 
-    ofp_rouge.close()
+            uesd_seg_len.append(end_idx_aligned - start_idx_aligned)
+
+    ofp_rouge_sent.close()
+    ofp_rouge_segm.close()
 
     # print('Sent used:', total_used, '/', total_s, total_used/float(total_s))
     # print('Avg len (sent)', np.mean(cur_used_ls))
     #
-    return np.mean(cur_used_ls), total_used, total_s
+    return np.mean(cur_used_ls), total_used, total_s, np.mean(uesd_seg_len)
 
 
-def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, rouge_dict=None, x_for_rouge=None):
+def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, rouge_dict=None, x_for_rouge=None, x_sent_align=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     # num_train_optimization_steps = int(num_examples / 128)
@@ -373,7 +403,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
     weights = torch.tensor([0.1, 1.0], dtype=torch.float32).to(device)
     # weights = None
-    cur_used_ls_mean, total_used, total_s = None, None, None
+    cur_used_ls_mean, total_used, total_s, mean_seg_len = None, None, None, None
 
     for _ in trange(num_train_epochs, desc="Epoch"):
         for step, batch in enumerate(tqdm(loader_train, desc="Iteration")):
@@ -391,7 +421,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
             acc_loss_s.append(loss_s.cpu().data.numpy())
             acc_loss_qa.append(loss_q.cpu().data.numpy())
 
-            if (step + 1) % 100 == 0:
+            if (step + 1) % 1 == 0:
                 loss_ls.append(np.mean(acc_loss))
                 loss_ls_s.append(np.mean(acc_loss_s))
                 loss_ls_qa.append(np.mean(acc_loss_qa))
@@ -421,7 +451,6 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
                         eval_sys_sent.extend(sent_l.cpu().data.numpy())
 
                         batch_ids.extend(batch_id.cpu().data.numpy().tolist())
-
                         valid_ls.append(valid_l.cpu().data.numpy())
 
                     qa_acc_val, qa_f1_val, sent_acc_val, sent_f1_val = get_valid_evaluation(eval_gt_start,
@@ -443,7 +472,15 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
                         best_valid = avg_val_loss
                         unchanged = 0
 
-                        cur_used_ls_mean, total_used, total_s = create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, batch_ids)
+                        cur_used_ls_mean, total_used, total_s, mean_seg_len = create_valid_rouge(rouge_dict,
+                                                                                                 x_for_rouge,
+                                                                                                 eval_sys_sent,
+                                                                                                 eval_sys_start,
+                                                                                                 eval_sys_end,
+                                                                                                 batch_ids,
+                                                                                                 x_sent_align,
+                                                                                                 rouge_sys_sent_path,
+                                                                                                 rouge_sys_segs_path)
 
                     elif unchanged > unchanged_limit:
 
@@ -467,6 +504,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
                         print('\n\n\nSent used:', total_used, '/', total_s, total_used / float(total_s))
                         print('Avg len (sent)', cur_used_ls_mean)
+                        print('avg seg len', mean_seg_len)
 
                         return
                     else:
@@ -491,7 +529,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     plt.savefig('metrics_model.png', dpi=400)
 
 
-loader_train_, loader_valid_, _n, rouge_map, x_for_rouge = create_iterator(max_size=100000)
+loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=1000)
 print('loaded data', _n)
 train(model=CustomNetwork.from_pretrained('bert-base-uncased'),
       loader_train=loader_train_,
@@ -499,5 +537,6 @@ train(model=CustomNetwork.from_pretrained('bert-base-uncased'),
       num_examples=_n,
       num_train_epochs=100,
       rouge_dict=rouge_map,
-      x_for_rouge=x_for_rouge)
+      x_for_rouge=x_for_rouge,
+      x_sent_align=x_sent_align)
 
