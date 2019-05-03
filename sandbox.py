@@ -369,7 +369,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
     best_valid = 100.0
     unchanged = 0
-    unchanged_limit = 30
+    unchanged_limit = 10
 
     weights = torch.tensor([0.1, 1.0], dtype=torch.float32).to(device)
     # weights = None
@@ -491,13 +491,13 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     plt.savefig('metrics_model.png', dpi=400)
 
 
-loader_train_, loader_valid_, _n, rouge_map, x_for_rouge = create_iterator(max_size=100000)
+loader_train_, loader_valid_, _n, rouge_map, x_for_rouge = create_iterator(max_size=10000)
 print('loaded data', _n)
 train(model=CustomNetwork.from_pretrained('bert-base-uncased'),
       loader_train=loader_train_,
       loader_valid=loader_valid_,
       num_examples=_n,
-      num_train_epochs=75,
+      num_train_epochs=15,
       rouge_dict=rouge_map,
       x_for_rouge=x_for_rouge)
 
