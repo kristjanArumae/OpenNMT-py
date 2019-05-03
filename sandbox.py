@@ -329,8 +329,10 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, batch_ids):
 
     ofp_rouge.close()
 
-    print('Sent used:', total_used, '/', total_s, total_used/float(total_s))
-    print('Avg len (sent)', np.mean(cur_used_ls))
+    # print('Sent used:', total_used, '/', total_s, total_used/float(total_s))
+    # print('Avg len (sent)', np.mean(cur_used_ls))
+    #
+    return np.mean(cur_used_ls), total_used, total_s
 
 
 def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, rouge_dict=None, x_for_rouge=None):
@@ -371,6 +373,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
     weights = torch.tensor([0.1, 1.0], dtype=torch.float32).to(device)
     # weights = None
+    cur_used_ls_mean, total_used, total_s = None, None, None
 
     for _ in trange(num_train_epochs, desc="Epoch"):
         for step, batch in enumerate(tqdm(loader_train, desc="Iteration")):
@@ -440,7 +443,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
                         best_valid = avg_val_loss
                         unchanged = 0
 
-                        create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, batch_ids)
+                        cur_used_ls_mean, total_used, total_s = create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, batch_ids)
 
                     elif unchanged > unchanged_limit:
 
@@ -461,6 +464,9 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
                         plt.legend(loc='best')
                         plt.savefig('val_model.png', dpi=400)
+
+                        print('Sent used:', total_used, '/', total_s, total_used / float(total_s))
+                        print('Avg len (sent)', cur_used_ls_mean)
 
                         return
                     else:
