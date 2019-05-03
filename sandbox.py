@@ -369,7 +369,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
     best_valid = 100.0
     unchanged = 0
-    unchanged_limit = 10
+    unchanged_limit = 25
 
     weights = torch.tensor([0.1, 1.0], dtype=torch.float32).to(device)
     # weights = None
@@ -391,7 +391,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
             acc_loss_s.append(loss_s.cpu().data.numpy())
             acc_loss_qa.append(loss_q.cpu().data.numpy())
 
-            if (step + 1) % 10 == 0:
+            if (step + 1) % 100 == 0:
                 loss_ls.append(np.mean(acc_loss))
                 loss_ls_s.append(np.mean(acc_loss_s))
                 loss_ls_qa.append(np.mean(acc_loss_qa))
@@ -465,7 +465,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
                         plt.legend(loc='best')
                         plt.savefig('val_model.png', dpi=400)
 
-                        print('Sent used:', total_used, '/', total_s, total_used / float(total_s))
+                        print('\n\n\nSent used:', total_used, '/', total_s, total_used / float(total_s))
                         print('Avg len (sent)', cur_used_ls_mean)
 
                         return
@@ -491,13 +491,13 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     plt.savefig('metrics_model.png', dpi=400)
 
 
-loader_train_, loader_valid_, _n, rouge_map, x_for_rouge = create_iterator(max_size=10000)
+loader_train_, loader_valid_, _n, rouge_map, x_for_rouge = create_iterator(max_size=100000)
 print('loaded data', _n)
 train(model=CustomNetwork.from_pretrained('bert-base-uncased'),
       loader_train=loader_train_,
       loader_valid=loader_valid_,
       num_examples=_n,
-      num_train_epochs=15,
+      num_train_epochs=100,
       rouge_dict=rouge_map,
       x_for_rouge=x_for_rouge)
 
