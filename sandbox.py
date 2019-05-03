@@ -24,8 +24,8 @@ class CustomNetwork(BertPreTrainedModel):
         self.bert = BertModel(config)
         self.apply(self.init_bert_weights)
 
-        self.dropout_qa = nn.Dropout(config.hidden_dropout_prob)
-        self.dropout_s = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout_qa = nn.Dropout(0.25)
+        self.dropout_s = nn.Dropout(0.25)
         self.classifier = nn.Linear(config.hidden_size, num_labels)
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
 
