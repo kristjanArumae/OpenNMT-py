@@ -320,8 +320,8 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
         end_idx_aligned = x_a[end_idx]
 
         if model_lbl_s > 0:
-            start_idx_model = x_a[model_lbl_start]
-            end_idx_model = x_a[model_lbl_end]
+            start_idx_model = x_a[model_lbl_start] if model_lbl_start < len(x_a) else x_a[-1]
+            end_idx_model = x_a[model_lbl_end] if model_lbl_end < len(x_a) else x_a[-1]
         else:
             start_idx_model = end_idx_model = -1
 
@@ -344,8 +344,10 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
             cur_used = 0
 
             if sys_lbl_s[1] > sys_lbl_s[0]:
+                segment = x_o.split()[start_idx_aligned:end_idx_aligned + 1]
+
                 ofp_rouge_sent.write(x_o)
-                ofp_rouge_segm.write(x_o[start_idx_aligned:end_idx_aligned + 1])
+                ofp_rouge_segm.write(' '.join(segment))
 
                 ofp_rouge_sent.write(' ')
                 ofp_rouge_segm.write(' ')
@@ -400,8 +402,10 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
                     ofp_readable.write(x_o + '</br>')
 
         elif sys_lbl_s[1] > sys_lbl_s[0]:
+            segment = x_o.split()[start_idx_aligned:end_idx_aligned + 1]
+
             ofp_rouge_sent.write(x_o)
-            ofp_rouge_segm.write(x_o[start_idx_aligned:end_idx_aligned + 1])
+            ofp_rouge_segm.write(' '.join(segment))
 
             ofp_rouge_sent.write(' ')
             ofp_rouge_segm.write(' ')
@@ -498,7 +502,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
     best_valid = 100.0
     unchanged = 0
-    unchanged_limit = 20
+    unchanged_limit = 10
 
     weights = torch.tensor([0.05, 1.0], dtype=torch.float32).to(device)
     # weights = None
@@ -520,7 +524,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
             acc_loss_s.append(loss_s.cpu().data.numpy())
             acc_loss_qa.append(loss_q.cpu().data.numpy())
 
-            if (step + 1) % 50 == 0:
+            if (step + 1) % 100 == 0:
                 loss_ls.append(np.mean(acc_loss))
                 loss_ls_s.append(np.mean(acc_loss_s))
                 loss_ls_qa.append(np.mean(acc_loss_qa))
@@ -631,7 +635,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     plt.savefig('metrics_model.png', dpi=400)
 
 
-loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=50000)
+loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=100000)
 print('loaded data', _n)
 train(model=CustomNetwork.from_pretrained('bert-base-uncased'),
       loader_train=loader_train_,
