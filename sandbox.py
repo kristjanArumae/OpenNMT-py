@@ -286,8 +286,8 @@ def get_valid_evaluation(eval_gt_start,
     # return acc_sent, sent_f1
 
 
-def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, eval_sys_end, batch_ids, align_ls,
-                       rouge_sys_sent_path, rouge_sys_segs_path):
+def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, eval_sys_end, gt_sent, gt_start, gt_end,
+                       batch_ids, align_ls, rouge_sys_sent_path, rouge_sys_segs_path):
 
     ofp_rouge_sent = None
     ofp_rouge_segm = None
@@ -305,19 +305,25 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
 
     ofp_readable = open('data.nosync/readable.html', 'w+')
 
-    for x_o, sys_lbl_s, sys_lbl_qa_start, sys_lbl_qa_end, b_id, x_a in zip(x_for_rouge, eval_sys_sent, eval_sys_start,
-                                                                           eval_sys_end, batch_ids, align_ls):
+    for x_o, sys_lbl_s, sys_lbl_start, sys_lbl_end, model_lbl_s, model_lbl_start, model_lbl_end, b_id, x_a in zip(
+            x_for_rouge, eval_sys_sent, eval_sys_start, eval_sys_end, gt_sent, gt_start, gt_end, batch_ids, align_ls):
         total_s += 1
         assert b_id not in used_set
 
-        start_idx = min(np.argmax(sys_lbl_qa_start), x_a[-1])
-        end_idx = min(np.argmax(sys_lbl_qa_end), x_a[-1])
+        start_idx = min(np.argmax(sys_lbl_start), x_a[-1])
+        end_idx = min(np.argmax(sys_lbl_end), x_a[-1])
 
         if end_idx < start_idx:
-            end_idx = min(np.argmax(sys_lbl_qa_start[start_idx:]), x_a[-1])
+            end_idx = min(np.argmax(sys_lbl_start[start_idx:]), x_a[-1])
 
         start_idx_aligned = x_a[start_idx]
         end_idx_aligned = x_a[end_idx]
+
+        if model_lbl_s > 0:
+            start_idx_model = x_a[model_lbl_start]
+            end_idx_model = x_a[model_lbl_end]
+        else:
+            start_idx_model = end_idx_model = -1
 
         if cur_batch != b_id:
 
@@ -345,13 +351,33 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
                 ofp_rouge_segm.write(' ')
 
                 for i, token in enumerate(x_o.split()):
-                    if i < start_idx_aligned: # not started
-                        ofp_readable.write(token + ' ')
-                    elif start_idx_aligned <= i <= end_idx_aligned: # inside segment
-                        ofp_readable.write(
-                            '<span style="background-color: rgba(255, 0, 0, 0.65);">' + token + ' </span>')
-                    else: # after
-                        ofp_readable.write(token + ' ')
+                    if model_lbl_s > 0:
+                        if i < start_idx_aligned: # not started
+                            if start_idx_model <= i <= end_idx_model:
+                                ofp_readable.write('<span style="background-color: rgba(0, 255, 0, 0.65);">' + token + ' </span>')
+                            else:
+                                ofp_readable.write(token + ' ')
+
+                        elif start_idx_aligned <= i <= end_idx_aligned: # inside segment
+                            if start_idx_model <= i <= end_idx_model:
+                                ofp_readable.write(
+                                    '<span style="background-color: rgba(0, 0, 255, 0.65);">' + token + ' </span>')
+                            else:
+                                ofp_readable.write(
+                                    '<span style="background-color: rgba(255, 0, 0, 0.65);">' + token + ' </span>')
+                        else: # after
+                            if start_idx_model <= i <= end_idx_model:
+                                ofp_readable.write('<span style="background-color: rgba(0, 255, 0, 0.65);">' + token + ' </span>')
+                            else:
+                                ofp_readable.write(token + ' ')
+                    else:
+                        if i < start_idx_aligned: # not started
+                            ofp_readable.write(token + ' ')
+                        elif start_idx_aligned <= i <= end_idx_aligned: # inside segment
+                            ofp_readable.write(
+                                '<span style="background-color: rgba(255, 0, 0, 0.65);">' + token + ' </span>')
+                        else: # after
+                            ofp_readable.write(token + ' ')
 
                 total_used += 1
                 cur_used += 1
@@ -360,7 +386,18 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
 
                 ofp_readable.write('</br>')
             else:
-                ofp_readable.write(x_o + '</br>')
+                if model_lbl_s > 0:
+                    for i, token in enumerate(x_o.split()):
+                        if start_idx_model <= i <= end_idx_model:
+                            ofp_readable.write(
+                                '<span style="background-color: rgba(0, 255, 0, 0.65);">' + token + ' </span>')
+                        else:
+                            ofp_readable.write(token + ' ')
+
+                    ofp_readable.write('</br>')
+
+                else:
+                    ofp_readable.write(x_o + '</br>')
 
         elif sys_lbl_s[1] > sys_lbl_s[0]:
             ofp_rouge_sent.write(x_o)
@@ -370,13 +407,35 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
             ofp_rouge_segm.write(' ')
 
             for i, token in enumerate(x_o.split()):
-                if i < start_idx_aligned:  # not started
-                    ofp_readable.write(token + ' ')
-                elif start_idx_aligned <= i <= end_idx_aligned:  # inside segment
-                    ofp_readable.write(
-                        '<span style="background-color: rgba(255, 0, 0, 0.65);">' + token + ' </span>')
-                else:  # after
-                    ofp_readable.write(token + ' ')
+                if model_lbl_s > 0:
+                    if i < start_idx_aligned:  # not started
+                        if start_idx_model <= i <= end_idx_model:
+                            ofp_readable.write(
+                                '<span style="background-color: rgba(0, 255, 0, 0.65);">' + token + ' </span>')
+                        else:
+                            ofp_readable.write(token + ' ')
+
+                    elif start_idx_aligned <= i <= end_idx_aligned:  # inside segment
+                        if start_idx_model <= i <= end_idx_model:
+                            ofp_readable.write(
+                                '<span style="background-color: rgba(0, 0, 255, 0.65);">' + token + ' </span>')
+                        else:
+                            ofp_readable.write(
+                                '<span style="background-color: rgba(255, 0, 0, 0.65);">' + token + ' </span>')
+                    else:  # after
+                        if start_idx_model <= i <= end_idx_model:
+                            ofp_readable.write(
+                                '<span style="background-color: rgba(0, 255, 0, 0.65);">' + token + ' </span>')
+                        else:
+                            ofp_readable.write(token + ' ')
+                else:
+                    if i < start_idx_aligned:  # not started
+                        ofp_readable.write(token + ' ')
+                    elif start_idx_aligned <= i <= end_idx_aligned:  # inside segment
+                        ofp_readable.write(
+                            '<span style="background-color: rgba(255, 0, 0, 0.65);">' + token + ' </span>')
+                    else:  # after
+                        ofp_readable.write(token + ' ')
 
             ofp_readable.write('</br>')
 
@@ -385,7 +444,18 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
 
             uesd_seg_len.append(end_idx_aligned - start_idx_aligned)
         else:
-            ofp_readable.write(x_o + '</br>')
+            if model_lbl_s > 0:
+                for i, token in enumerate(x_o.split()):
+                    if start_idx_model <= i <= end_idx_model:
+                        ofp_readable.write(
+                            '<span style="background-color: rgba(0, 255, 0, 0.65);">' + token + ' </span>')
+                    else:
+                        ofp_readable.write(token + ' ')
+
+                ofp_readable.write('</br>')
+
+            else:
+                ofp_readable.write(x_o + '</br>')
 
     ofp_rouge_sent.close()
     ofp_rouge_segm.close()
@@ -428,7 +498,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
     best_valid = 100.0
     unchanged = 0
-    unchanged_limit = 15
+    unchanged_limit = 20
 
     weights = torch.tensor([0.05, 1.0], dtype=torch.float32).to(device)
     # weights = None
@@ -450,7 +520,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
             acc_loss_s.append(loss_s.cpu().data.numpy())
             acc_loss_qa.append(loss_q.cpu().data.numpy())
 
-            if (step + 1) % 20 == 0:
+            if (step + 1) % 50 == 0:
                 loss_ls.append(np.mean(acc_loss))
                 loss_ls_s.append(np.mean(acc_loss_s))
                 loss_ls_qa.append(np.mean(acc_loss_qa))
@@ -506,6 +576,9 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
                                                                                                  eval_sys_sent,
                                                                                                  eval_sys_start,
                                                                                                  eval_sys_end,
+                                                                                                 eval_gt_sent,
+                                                                                                 eval_gt_start,
+                                                                                                 eval_gt_end,
                                                                                                  batch_ids,
                                                                                                  x_sent_align,
                                                                                                  rouge_sys_sent_path,
@@ -558,7 +631,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     plt.savefig('metrics_model.png', dpi=400)
 
 
-loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=30000)
+loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=50000)
 print('loaded data', _n)
 train(model=CustomNetwork.from_pretrained('bert-base-uncased'),
       loader_train=loader_train_,
