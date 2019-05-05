@@ -110,7 +110,7 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
         updated_b_id_ls.append(batch_id)
 
         sent_tokenized_ls.append([sent_tokenized_as_idx, sent_tokenized_as_tok])
-        sent_orig_ls.append(sent)
+        sent_orig_ls.append(' '.join(word_ls))
 
         total += 1
 
