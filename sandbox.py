@@ -511,8 +511,6 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
                                                                                                  rouge_sys_sent_path,
                                                                                                  rouge_sys_segs_path)
 
-                        return
-
                     elif unchanged > unchanged_limit:
 
                         plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
