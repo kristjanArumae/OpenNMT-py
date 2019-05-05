@@ -303,6 +303,8 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
 
     uesd_seg_len = []
 
+    ofp_readable = open('data.nosync/readable.html', 'w+')
+
     for x_o, sys_lbl_s, sys_lbl_qa_start, sys_lbl_qa_end, b_id, x_a in zip(x_for_rouge, eval_sys_sent, eval_sys_start,
                                                                            eval_sys_end, batch_ids, align_ls):
         total_s += 1
@@ -325,6 +327,9 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
             if ofp_rouge_sent is not None:
                 ofp_rouge_sent.close()
                 ofp_rouge_segm.close()
+                ofp_readable.write('</p>')
+
+            ofp_readable.write('<p>')
 
             ofp_rouge_sent = open(rouge_sys_sent_path + 's_' + str(rouge_dict[cur_batch]).zfill(6) + '.txt', 'w+')
             ofp_rouge_segm = open(rouge_sys_segs_path + 's_' + str(rouge_dict[cur_batch]).zfill(6) + '.txt', 'w+')
@@ -339,10 +344,23 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
                 ofp_rouge_sent.write(' ')
                 ofp_rouge_segm.write(' ')
 
+                for i, token in enumerate(x_o.split()):
+                    if i < start_idx_aligned: # not started
+                        ofp_readable.write(token + ' ')
+                    elif start_idx_aligned <= i <= end_idx_aligned: # inside segment
+                        ofp_readable.write(
+                            '<span style="background-color: rgba(255, 0, 0, 0.65);">' + token + ' </span>')
+                    else: # after
+                        ofp_readable.write(token + ' ')
+
                 total_used += 1
                 cur_used += 1
 
                 uesd_seg_len.append(end_idx_aligned - start_idx_aligned)
+
+                ofp_readable.write('</br>')
+            else:
+                ofp_readable.write(x_o + '</br>')
 
         elif sys_lbl_s[1] > sys_lbl_s[0]:
             ofp_rouge_sent.write(x_o)
@@ -351,17 +369,28 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
             ofp_rouge_sent.write(' ')
             ofp_rouge_segm.write(' ')
 
+            for i, token in enumerate(x_o.split()):
+                if i < start_idx_aligned:  # not started
+                    ofp_readable.write(token + ' ')
+                elif start_idx_aligned <= i <= end_idx_aligned:  # inside segment
+                    ofp_readable.write(
+                        '<span style="background-color: rgba(255, 0, 0, 0.65);">' + token + ' </span>')
+                else:  # after
+                    ofp_readable.write(token + ' ')
+
+            ofp_readable.write('</br>')
+
             total_used += 1
             cur_used += 1
 
             uesd_seg_len.append(end_idx_aligned - start_idx_aligned)
+        else:
+            ofp_readable.write(x_o + '</br>')
 
     ofp_rouge_sent.close()
     ofp_rouge_segm.close()
+    ofp_readable.close()
 
-    # print('Sent used:', total_used, '/', total_s, total_used/float(total_s))
-    # print('Avg len (sent)', np.mean(cur_used_ls))
-    #
     return np.mean(cur_used_ls), total_used, total_s, np.mean(uesd_seg_len)
 
 
@@ -399,7 +428,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
     best_valid = 100.0
     unchanged = 0
-    unchanged_limit = 25
+    unchanged_limit = 15
 
     weights = torch.tensor([0.05, 1.0], dtype=torch.float32).to(device)
     # weights = None
@@ -482,6 +511,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
                                                                                                  rouge_sys_sent_path,
                                                                                                  rouge_sys_segs_path)
 
+                        return
+
                     elif unchanged > unchanged_limit:
 
                         plt.plot([i for i in range(len(loss_ls))], loss_ls, '-', label="loss", linewidth=1)
@@ -529,7 +560,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     plt.savefig('metrics_model.png', dpi=400)
 
 
-loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=100000)
+loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=30000)
 print('loaded data', _n)
 train(model=CustomNetwork.from_pretrained('bert-base-uncased'),
       loader_train=loader_train_,
