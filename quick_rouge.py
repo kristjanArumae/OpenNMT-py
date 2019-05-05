@@ -29,4 +29,4 @@ def run_rouge(data_split='train', by=False, s='small_sys_sent'):
 # output_path_system_segm = 'data.nosync/' + data_split + '/system_segm/'
 
 run_rouge()
-# run_rouge(s='system_segm')
+run_rouge(s='small_sys_segm')
