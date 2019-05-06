@@ -153,7 +153,7 @@ class CustomNetworkSent(BertPreTrainedModel):
 
 def create_iterator(max_len=45, max_size=-1):
     ifp = open('data.nosync/train/cnndm_labeled_tokenized.json', 'rb')
-    rouge_model_path = 'data.nosync/train/small_model/'
+    rouge_model_path = 'data.nosync/train/small_model2/'
 
     if not os.path.exists(rouge_model_path):
         os.mkdir(rouge_model_path)
@@ -303,7 +303,7 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
 
     uesd_seg_len = []
 
-    ofp_readable = open('data.nosync/readable.html', 'w+')
+    ofp_readable = open('data.nosync/readable2.html', 'w+')
 
     for x_o, sys_lbl_s, sys_lbl_start, sys_lbl_end, model_lbl_s, model_lbl_start, model_lbl_end, b_id, x_a in zip(
             x_for_rouge, eval_sys_sent, eval_sys_start, eval_sys_end, gt_sent, gt_start, gt_end, batch_ids, align_ls):
@@ -475,8 +475,8 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
     ofp_model = 'data.nosync/small_model.pt'
 
-    rouge_sys_sent_path = 'data.nosync/train/small_sys_sent/'
-    rouge_sys_segs_path = 'data.nosync/train/small_sys_segs/'
+    rouge_sys_sent_path = 'data.nosync/train/small_sys_sent2/'
+    rouge_sys_segs_path = 'data.nosync/train/small_sys_segs2/'
 
     if not os.path.exists(rouge_sys_sent_path):
         os.mkdir(rouge_sys_sent_path)
@@ -599,7 +599,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
                         plt.plot([i for i in range(len(loss_ls))], loss_valid_ls, '-', label="valid", linewidth=1)
 
                         plt.legend(loc='best')
-                        plt.savefig('loss_model.png', dpi=400)
+                        plt.savefig('loss_model_lg.png', dpi=400)
 
                         plt.clf()
 
@@ -609,7 +609,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
                         plt.plot([i for i in range(len(sent_f1))], sent_f1, '-', label="sent f1", linewidth=1)
 
                         plt.legend(loc='best')
-                        plt.savefig('val_model.png', dpi=400)
+                        plt.savefig('val_model_lg.png', dpi=400)
 
                         print('\n\n\nSent used:', total_used, '/', total_s, total_used / float(total_s))
                         print('Avg len (sent)', cur_used_ls_mean)
@@ -626,7 +626,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     plt.plot([i for i in range(len(loss_ls))], loss_valid_ls, '-', label="valid", linewidth=1)
 
     plt.legend(loc='best')
-    plt.savefig('loss_model.png', dpi=400)
+    plt.savefig('loss_model_lg.png', dpi=400)
 
     plt.clf()
 
@@ -636,7 +636,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     plt.plot([i for i in range(len(sent_f1))], sent_f1, '-', label="sent f1", linewidth=1)
 
     plt.legend(loc='best')
-    plt.savefig('metrics_model.png', dpi=400)
+    plt.savefig('metrics_model_lg.png', dpi=400)
 
 
 loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=500000)
