@@ -468,7 +468,7 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
     return np.mean(cur_used_ls), total_used, total_s, np.mean(uesd_seg_len)
 
 
-def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, rouge_dict=None, x_for_rouge=None, x_sent_align=None):
+def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, rouge_dict=None, x_for_rouge=None, x_sent_align=None, optim='adam'):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     # num_train_optimization_steps = int(num_examples / 128)
@@ -491,8 +491,10 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     #     {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
     #     {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     # ]
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-5, weight_decay=0.01)
-    # optimizer = BertAdam(model.parameters(), lr=1e-04)
+    if optim == 'sgd':
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-5, weight_decay=0.01)
+    else:
+        optimizer = BertAdam(model.parameters(), lr=1e-03, weight_decay=0.01)
 
     model.train()
 
@@ -646,5 +648,6 @@ train(model=CustomNetwork.from_pretrained('bert-base-uncased'),
       num_train_epochs=100,
       rouge_dict=rouge_map,
       x_for_rouge=x_for_rouge,
-      x_sent_align=x_sent_align)
+      x_sent_align=x_sent_align,
+      optim='adam')
 
