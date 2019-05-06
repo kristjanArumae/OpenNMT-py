@@ -505,7 +505,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
     best_valid = 100.0
     unchanged = 0
-    unchanged_limit = 20
+    unchanged_limit = 30
 
     weights = torch.tensor([0.05, 1.0], dtype=torch.float32).to(device)
     # weights = None
