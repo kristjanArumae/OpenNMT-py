@@ -151,7 +151,7 @@ class CustomNetworkSent(BertPreTrainedModel):
             return logits
 
 
-def create_iterator(max_len=30, max_size=-1):
+def create_iterator(max_len=45, max_size=-1):
     ifp = open('data.nosync/train/cnndm_labeled_tokenized.json', 'rb')
     rouge_model_path = 'data.nosync/train/small_model/'
 
@@ -491,7 +491,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     #     {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
     #     {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     # ]
-    optimizer = BertAdam(model.parameters(), lr=1e-05)
+    optimizer = BertAdam(model.parameters(), lr=1e-04)
 
     model.train()
 
@@ -635,7 +635,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     plt.savefig('metrics_model.png', dpi=400)
 
 
-loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=200000)
+loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=100000)
 print('loaded data', _n)
 train(model=CustomNetwork.from_pretrained('bert-base-uncased'),
       loader_train=loader_train_,
