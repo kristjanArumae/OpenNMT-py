@@ -32,8 +32,7 @@ class CustomNetwork(BertPreTrainedModel):
         print('model loaded')
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, start_positions=None,end_positions=None, weights=None, train=False):
-        sequence_output, pooled_output = self.bert(input_ids, token_type_ids, attention_mask,
-                                                   output_all_encoded_layers=False)
+        sequence_output, pooled_output = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
 
         pooled_output = self.dropout_s(pooled_output)
         sequence_output = self.dropout_qa(sequence_output)
@@ -153,7 +152,7 @@ class CustomNetworkSent(BertPreTrainedModel):
 
 def create_iterator(max_len=45, max_size=-1):
     ifp = open('data.nosync/train/cnndm_labeled_tokenized.json', 'rb')
-    rouge_model_path = 'data.nosync/train/small_model2/'
+    rouge_model_path = 'data.nosync/train/small_model/'
 
     if not os.path.exists(rouge_model_path):
         os.mkdir(rouge_model_path)
@@ -303,7 +302,7 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
 
     uesd_seg_len = []
 
-    ofp_readable = open('data.nosync/readable2.html', 'w+')
+    ofp_readable = open('data.nosync/readable.html', 'w+')
 
     for x_o, sys_lbl_s, sys_lbl_start, sys_lbl_end, model_lbl_s, model_lbl_start, model_lbl_end, b_id, x_a in zip(
             x_for_rouge, eval_sys_sent, eval_sys_start, eval_sys_end, gt_sent, gt_start, gt_end, batch_ids, align_ls):
@@ -483,14 +482,6 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     if not os.path.exists(rouge_sys_segs_path):
         os.mkdir(rouge_sys_segs_path)
 
-    # no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
-
-    # param_optimizer = list(model.named_parameters())
-
-    # optimizer_grouped_parameters = [
-    #     {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
-    #     {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
-    # ]
     if optim == 'sgd':
         optimizer = torch.optim.SGD(model.parameters(), lr=1e-5, weight_decay=0.01)
     else:
@@ -527,7 +518,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
             acc_loss_s.append(loss_s.cpu().data.numpy())
             acc_loss_qa.append(loss_q.cpu().data.numpy())
 
-            if (step + 1) % 100 == 0:
+            if (step + 1) % 200 == 0:
                 loss_ls.append(np.mean(acc_loss))
                 loss_ls_s.append(np.mean(acc_loss_s))
                 loss_ls_qa.append(np.mean(acc_loss_qa))
@@ -639,7 +630,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     plt.savefig('metrics_model.png', dpi=400)
 
 
-loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=100000)
+loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=500000)
 print('loaded data', _n)
 train(model=CustomNetwork.from_pretrained('bert-base-uncased'),
       loader_train=loader_train_,
