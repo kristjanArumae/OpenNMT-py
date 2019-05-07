@@ -24,8 +24,8 @@ class CustomNetwork(BertPreTrainedModel):
         self.bert = BertModel(config)
         self.apply(self.init_bert_weights)
 
-        self.dropout_qa = nn.Dropout(0.25)
-        self.dropout_s = nn.Dropout(0.25)
+        self.dropout_qa = nn.Dropout(0.1)
+        self.dropout_s = nn.Dropout(0.1)
         self.classifier = nn.Linear(config.hidden_size, num_labels)
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
 
@@ -150,9 +150,9 @@ class CustomNetworkSent(BertPreTrainedModel):
             return logits
 
 
-def create_iterator(max_len=45, max_size=-1):
+def create_iterator(max_len=45, max_size=-1, batch_size=32):
     ifp = open('data.nosync/train/cnndm_labeled_tokenized.json', 'rb')
-    rouge_model_path = 'data.nosync/train/small_model/'
+    rouge_model_path = 'data.nosync/train/small_model_bert_large/'
 
     if not os.path.exists(rouge_model_path):
         os.mkdir(rouge_model_path)
@@ -243,8 +243,8 @@ def create_iterator(max_len=45, max_size=-1):
             used_b_id[batch_id] = rouge_counter
             rouge_counter += 1
 
-    return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=128), DataLoader(
-        tensor_data_valid, batch_size=128), num_t, used_b_id, x_for_rouge[:val_split], all_sent_align[:val_split]
+    return DataLoader(tensor_data_train, sampler=RandomSampler(tensor_data_train), batch_size=batch_size), DataLoader(
+        tensor_data_valid, batch_size=batch_size), num_t, used_b_id, x_for_rouge[:val_split], all_sent_align[:val_split]
 
 
 def get_valid_evaluation(eval_gt_start,
@@ -302,7 +302,7 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
 
     uesd_seg_len = []
 
-    ofp_readable = open('data.nosync/readable.html', 'w+')
+    ofp_readable = open('data.nosync/readable_bert_large.html', 'w+')
 
     for x_o, sys_lbl_s, sys_lbl_start, sys_lbl_end, model_lbl_s, model_lbl_start, model_lbl_end, b_id, x_a in zip(
             x_for_rouge, eval_sys_sent, eval_sys_start, eval_sys_end, gt_sent, gt_start, gt_end, batch_ids, align_ls):
@@ -470,12 +470,12 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
 def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, rouge_dict=None, x_for_rouge=None, x_sent_align=None, optim='adam'):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    # num_train_optimization_steps = int(num_examples / 128)
+    num_train_optimization_steps = int(num_examples / 32)
 
     ofp_model = 'data.nosync/small_model.pt'
 
-    rouge_sys_sent_path = 'data.nosync/train/small_sys_sent/'
-    rouge_sys_segs_path = 'data.nosync/train/small_sys_segs/'
+    rouge_sys_sent_path = 'data.nosync/train/small_sys_sent_bert_large/'
+    rouge_sys_segs_path = 'data.nosync/train/small_sys_segs_bert_large/'
 
     if not os.path.exists(rouge_sys_sent_path):
         os.mkdir(rouge_sys_sent_path)
@@ -485,7 +485,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     if optim == 'sgd':
         optimizer = torch.optim.SGD(model.parameters(), lr=1e-5, weight_decay=0.01)
     else:
-        optimizer = BertAdam(model.parameters(), lr=1e-06, weight_decay=0.01)
+        optimizer = BertAdam(model.parameters(), lr=3e-5, weight_decay=0.01, t_total=num_train_optimization_steps)
 
     model.train()
 
@@ -590,7 +590,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
                         plt.plot([i for i in range(len(loss_ls))], loss_valid_ls, '-', label="valid", linewidth=1)
 
                         plt.legend(loc='best')
-                        plt.savefig('loss_model.png', dpi=400)
+                        plt.savefig('loss_model_bert_large.png', dpi=400)
 
                         plt.clf()
 
@@ -600,7 +600,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
                         plt.plot([i for i in range(len(sent_f1))], sent_f1, '-', label="sent f1", linewidth=1)
 
                         plt.legend(loc='best')
-                        plt.savefig('val_model.png', dpi=400)
+                        plt.savefig('val_model_bert_large.png', dpi=400)
 
                         print('\n\n\nSent used:', total_used, '/', total_s, total_used / float(total_s))
                         print('Avg len (sent)', cur_used_ls_mean)
@@ -617,7 +617,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     plt.plot([i for i in range(len(loss_ls))], loss_valid_ls, '-', label="valid", linewidth=1)
 
     plt.legend(loc='best')
-    plt.savefig('loss_model.png', dpi=400)
+    plt.savefig('loss_model_bert_large.png', dpi=400)
 
     plt.clf()
 
@@ -627,12 +627,12 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     plt.plot([i for i in range(len(sent_f1))], sent_f1, '-', label="sent f1", linewidth=1)
 
     plt.legend(loc='best')
-    plt.savefig('metrics_model.png', dpi=400)
+    plt.savefig('val_model_bert_large.png', dpi=400)
 
 
 loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=500000)
 print('loaded data', _n)
-train(model=CustomNetwork.from_pretrained('bert-base-uncased'),
+train(model=CustomNetwork.from_pretrained('bert-large-uncased'),
       loader_train=loader_train_,
       loader_valid=loader_valid_,
       num_examples=_n,
