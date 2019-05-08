@@ -485,7 +485,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     if optim == 'sgd':
         optimizer = torch.optim.SGD(model.parameters(), lr=1e-5, weight_decay=0.01)
     else:
-        optimizer = BertAdam(model.parameters(), lr=3e-5, weight_decay=0.01, t_total=num_train_optimization_steps)
+        optimizer = BertAdam(model.parameters(), lr=3e-6, weight_decay=0.01, t_total=num_train_optimization_steps)
 
     model.train()
 
@@ -496,7 +496,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
     best_valid = 100.0
     unchanged = 0
-    unchanged_limit = 20
+    unchanged_limit = 15
 
     weights = torch.tensor([0.05, 1.0], dtype=torch.float32).to(device)
     # weights = None
@@ -518,7 +518,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
             acc_loss_s.append(loss_s.cpu().data.numpy())
             acc_loss_qa.append(loss_q.cpu().data.numpy())
 
-            if (step + 1) % 1000 == 0:
+            if (step + 1) % 100 == 0:
                 loss_ls.append(np.mean(acc_loss))
                 loss_ls_s.append(np.mean(acc_loss_s))
                 loss_ls_qa.append(np.mean(acc_loss_qa))
@@ -630,13 +630,13 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     plt.savefig('val_model_bert_large.png', dpi=400)
 
 
-loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=500000)
+loader_train_, loader_valid_, _n, rouge_map, x_for_rouge, x_sent_align = create_iterator(max_size=100000)
 print('loaded data', _n)
 train(model=CustomNetwork.from_pretrained('bert-large-uncased'),
       loader_train=loader_train_,
       loader_valid=loader_valid_,
       num_examples=_n,
-      num_train_epochs=200,
+      num_train_epochs=10,
       rouge_dict=rouge_map,
       x_for_rouge=x_for_rouge,
       x_sent_align=x_sent_align,
