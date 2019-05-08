@@ -485,7 +485,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
     if optim == 'sgd':
         optimizer = torch.optim.SGD(model.parameters(), lr=1e-5, weight_decay=0.01)
     else:
-        optimizer = BertAdam(model.parameters(), lr=3e-6, weight_decay=0.01, t_total=num_train_optimization_steps)
+        optimizer = BertAdam(model.parameters(), lr=3e-6)
 
     model.train()
 
@@ -496,7 +496,7 @@ def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, 
 
     best_valid = 100.0
     unchanged = 0
-    unchanged_limit = 15
+    unchanged_limit = 10
 
     weights = torch.tensor([0.05, 1.0], dtype=torch.float32).to(device)
     # weights = None
