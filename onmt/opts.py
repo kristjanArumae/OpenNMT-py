@@ -333,6 +333,7 @@ def train_opts(parser):
               help="Gives more info on each process per GPU.")
     group.add('--master_ip', '-master_ip', default="localhost", type=str,
               help="IP of master for torch.distributed training.")
+    group.add('--output_fname', '-output_fname', default=None, type=str)
     group.add('--master_port', '-master_port', default=10000, type=int,
               help="Port of master for torch.distributed training.")
 

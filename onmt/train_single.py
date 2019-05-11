@@ -54,6 +54,7 @@ def main(opt, device_id):
                                 map_location=lambda storage, loc: storage)
 
         model_opt = ArgumentParser.ckpt_model_opts(checkpoint["opt"])
+        model_opt.dropout = 0.0
         ArgumentParser.update_model_opts(model_opt)
         ArgumentParser.validate_model_opts(model_opt)
         logger.info('Loading vocab from checkpoint at %s.' % opt.train_from)
@@ -99,14 +100,8 @@ def main(opt, device_id):
     logger.info('* number of parameters: %d' % n_params)
     _check_save_model_path(opt)
 
-    # Build optimizer.
-    optim = Optimizer.from_opt(model, opt, checkpoint=checkpoint)
-
-    # Build model saver
-    model_saver = build_model_saver(model_opt, opt, model, fields, optim)
-
     trainer = build_trainer(
-        opt, device_id, model, fields, optim, model_saver=model_saver)
+        opt, device_id, model, fields, None, model_saver=None)
 
     train_iter = build_dataset_iter("train", fields, opt)
     valid_iter = build_dataset_iter(

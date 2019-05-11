@@ -63,7 +63,8 @@ def build_trainer(opt, device_id, model, fields, optim, model_saver=None):
                            model_saver=model_saver if gpu_rank == 0 else None,
                            average_decay=average_decay,
                            average_every=average_every,
-                           model_dtype=opt.model_dtype)
+                           model_dtype=opt.model_dtype,
+                           output_file=opt.output_fname)
     return trainer
 
 
@@ -99,7 +100,7 @@ class Trainer(object):
                  accum_steps=[0],
                  n_gpu=1, gpu_rank=1,
                  gpu_verbose_level=0, report_manager=None, model_saver=None,
-                 average_decay=0, average_every=1, model_dtype='fp32', output_file='stanford_attn_test'):
+                 average_decay=0, average_every=1, model_dtype='fp32', output_file=None):
         # Basic attributes.
         self.model = model
         self.train_loss = train_loss
@@ -302,7 +303,6 @@ class Trainer(object):
                 if self.accum_count == 1:
                     self.optim.zero_grad()
                 outputs, attns = self.model(src, tgt, src_lengths, bptt=bptt)
-                bptt = True
 
                 src_t = src.squeeze().t()
                 tgt_t = tgt.squeeze().t()
