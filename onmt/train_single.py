@@ -94,6 +94,7 @@ def main(opt, device_id):
 
     # Build model.
     model = build_model(model_opt, opt, fields, checkpoint)
+    optim = Optimizer.from_opt(model, opt, checkpoint=checkpoint)
     n_params, enc, dec = _tally_parameters(model)
     logger.info('encoder: %d' % enc)
     logger.info('decoder: %d' % dec)
@@ -101,7 +102,7 @@ def main(opt, device_id):
     _check_save_model_path(opt)
 
     trainer = build_trainer(
-        opt, device_id, model, fields, None, model_saver=None)
+        opt, device_id, model, fields, optim, model_saver=None)
 
     train_iter = build_dataset_iter("train", fields, opt)
 
