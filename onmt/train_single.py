@@ -104,8 +104,6 @@ def main(opt, device_id):
         opt, device_id, model, fields, None, model_saver=None)
 
     train_iter = build_dataset_iter("train", fields, opt)
-    valid_iter = build_dataset_iter(
-        "valid", fields, opt, is_train=False)
 
     if len(opt.gpu_ranks):
         logger.info('Starting training on GPU: %s' % opt.gpu_ranks)
