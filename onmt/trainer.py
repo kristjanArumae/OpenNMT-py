@@ -223,7 +223,6 @@ class Trainer(object):
             self._gradient_accumulation(
                 batches,
                 report_stats)
-            logger.info(i)
 
         if len(self.out_ls) > 0:
             logger.info('SAVING OUTPUT')
