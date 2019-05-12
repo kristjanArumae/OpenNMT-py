@@ -294,7 +294,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
 
                 if data_split != 'train':
                     ofp_sys_sent.write(sent_o.encode('utf-8') + ' ')
-                    ofp_sys_segm.write(' '.join(s_split_orig[longest_span[0]:longest_span[1]]).encode('utf-8') + ' ')
+                    ofp_sys_segm.write(' '.join(s_split_orig[longest_span[0]:longest_span[1] + 1]).encode('utf-8') + ' ')
 
                 num_pos += 1
 
