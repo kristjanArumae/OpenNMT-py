@@ -49,10 +49,20 @@ def get_args():
                         default=1e-5,
                         help="Learning rate")
 
+    parser.add_argument("--dropout",
+                        type=float,
+                        default=0.1,
+                        help="Top Layer dropout")
+
     parser.add_argument('--optim',
                         type=str,
                         default='adam',
                         help='Optimizer to use')
+
+    parser.add_argument('--use_positional',
+                        type='bool',
+                        default=True,
+                        help='Document level positional encodings')
 
     parser.add_argument("--weights",
                         type=float,
