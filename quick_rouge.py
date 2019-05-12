@@ -15,8 +15,8 @@ def run_rouge(data_split='valid', by=False, s='system_segm'):
     r.model_dir = rouge_fname
     r.system_dir = 'data.nosync/' + data_split + '/' + s + '/'
 
-    r.system_filename_pattern = 's_(\d+).txt'
-    r.model_filename_pattern = 'm_#ID#.txt'
+    r.system_filename_pattern = 'sum.(\d+).txt'
+    r.model_filename_pattern = 'd_#ID#.txt'
 
     fname = data_split + '_' + s + '_rouge.out'
     ofp = open(fname, 'w+')
