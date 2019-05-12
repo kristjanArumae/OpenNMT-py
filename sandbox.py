@@ -470,9 +470,6 @@ def create_valid_rouge(rouge_dict, x_for_rouge, eval_sys_sent, eval_sys_start, e
 def train(model, loader_train, loader_valid, num_examples, num_train_epochs=70, rouge_dict=None, x_for_rouge=None, x_sent_align=None, optim='adam'):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    num_train_optimization_steps = int(num_examples / 32)
-
-    ofp_model = 'data.nosync/small_model.pt'
 
     rouge_sys_sent_path = 'data.nosync/train/small_sys_sent_bert_large/'
     rouge_sys_segs_path = 'data.nosync/train/small_sys_segs_bert_large/'

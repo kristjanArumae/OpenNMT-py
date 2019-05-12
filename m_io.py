@@ -252,8 +252,10 @@ def create_output_name(args):
            '_bal_' + str(args.balance) + \
            '_bert_' + str(args.bert_model) + \
            '_lr_' + str(args.lr) + \
+           '_drop_' + str(args.dropout).replace('.', '_') + \
            '_op_' + str(args.optim) + \
            '_weight_' + str(args.weights) + \
+           '_dpos_' + str(args.use_positional) + \
            '_lim_' + str(args.unchanged_limit)
 
 

@@ -15,16 +15,19 @@ import os
 
 
 class CustomNetwork(BertPreTrainedModel):
-    def __init__(self, config, num_labels=2):
+    def __init__(self, config, num_labels=2, use_positional=True, dropout=0.1):
         super(CustomNetwork, self).__init__(config)
 
         self.num_labels = num_labels
-        config.type_vocab_size = config.max_position_embeddings
+
+        if use_positional:
+            config.type_vocab_size = config.max_position_embeddings
+
         self.bert = BertModel(config)
         self.apply(self.init_bert_weights)
 
-        self.dropout_qa = nn.Dropout(0.1)
-        self.dropout_s = nn.Dropout(0.1)
+        self.dropout_qa = nn.Dropout(dropout)
+        self.dropout_s = nn.Dropout(dropout)
         self.classifier = nn.Linear(config.hidden_size, num_labels)
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
 
@@ -160,20 +163,9 @@ def create_iterator(data_split='train', max_len=45, max_size=-1, batch_size=32, 
         used_b_id = dict()
         rouge_counter = 0
 
-        rouge_model_path = 'data.nosync/' + ofp_fname + '_rouge/'
-
-        if not os.path.exists(rouge_model_path):
-            os.mkdir(rouge_model_path)
-
         for batch_id in batch_id_list:
 
             if batch_id not in used_b_id:
-                y_text = rouge_dict[str(batch_id)]
-
-                ofp_rouge = open(rouge_model_path + 'm_' + str(rouge_counter).zfill(6) + '.txt', 'w+')
-                ofp_rouge.write(y_text)
-                ofp_rouge.close()
-
                 used_b_id[batch_id] = rouge_counter
                 rouge_counter += 1
 
@@ -328,7 +320,7 @@ if args.train:
                                                                                          bert_model=args.bert_model,
                                                                                          ofp_fname=ofp_fname)
 
-    model = CustomNetwork.from_pretrained(args.bert_model)
+    model = CustomNetwork.from_pretrained(args.bert_model, use_positional=args.use_positional, dropout=args.dropout)
 
     train(model=model,
           loader_train=data_loader_train,
