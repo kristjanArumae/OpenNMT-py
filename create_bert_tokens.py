@@ -4,18 +4,23 @@ from random import uniform
 from pytorch_pretrained_bert import BertTokenizer
 
 
-def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subset=-1, balance=None):
-    tokenizer = BertTokenizer.from_pretrained('bert-large-uncased')
+def tokenize_data(data_split='train', output_to_html=-1, small_subset=-1, balance=None, bert_model='bert-large-uncased'):
+    tokenizer = BertTokenizer.from_pretrained(bert_model)
 
     ifp = open('data.nosync/' + data_split + '/cnndm.json', 'rb')
     data = json.load(ifp)
 
     ifp.close()
 
+    bal_str = ''
+
+    if balance is not None and data_split == 'train': # do not balance test or valid
+        bal_str = '_balance_' + str(balance).replace('.', '_') + '_'
+
     ofp_html = None
 
     if output_to_html > 0:
-        ofp_html = open('data.nosync/' + data_split + '/cnndm_bert.html', 'w+')
+        ofp_html = open('data.nosync/' + data_split + '/' + bert_model + '_cnndm_bert' + bal_str + '.html', 'w+')
 
     sent_tokenized_ls = []
     updated_labels_ls = []
@@ -114,7 +119,7 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
 
         total += 1
 
-    ofp = open('data.nosync/' + data_split + '/cnndm_labeled_tokenized.json', 'w+')
+    ofp = open('data.nosync/' + data_split + '/' + bert_model + '_cnndm_labeled_tokenized' + bal_str + '.json', 'w+')
 
     updated_data = dict()
     updated_data['x'] = sent_tokenized_ls
@@ -127,7 +132,7 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
 
     print('original total : ', total_o)
 
-    print('current :', pos_lbl, '/', total)
+    print('current :', pos_lbl, '/', total, '\n')
 
     json.dump(updated_data, ofp)
 
@@ -137,4 +142,12 @@ def tokenize_data(data_split='train', max_len=30, output_to_html=-1, small_subse
         ofp_html.close()
 
 
-tokenize_data(output_to_html=10000, balance=None)
+tokenize_data(data_split='train', output_to_html=10000, small_subset=-1, balance=None, bert_model='bert-large-uncased')
+tokenize_data(data_split='train', output_to_html=10000, small_subset=-1, balance=0.2, bert_model='bert-large-uncased')
+tokenize_data(data_split='valid', output_to_html=10000, small_subset=-1, balance=None, bert_model='bert-large-uncased')
+tokenize_data(data_split='test', output_to_html=10000, small_subset=-1, balance=None, bert_model='bert-large-uncased')
+
+tokenize_data(data_split='train', output_to_html=10000, small_subset=-1, balance=None, bert_model='bert-base-uncased')
+tokenize_data(data_split='train', output_to_html=10000, small_subset=-1, balance=0.2, bert_model='bert-base-uncased')
+tokenize_data(data_split='valid', output_to_html=10000, small_subset=-1, balance=None, bert_model='bert-base-uncased')
+tokenize_data(data_split='test', output_to_html=10000, small_subset=-1, balance=None, bert_model='bert-base-uncased')
