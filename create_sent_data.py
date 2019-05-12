@@ -418,6 +418,6 @@ def combine_chunks(highlight_ls_):
     return highlight_ls, longest_span
 
 
-create_labels(data_split='train', output_to_html=5000, num_attn_files=5)
+# create_labels(data_split='train', output_to_html=5000, num_attn_files=5)
 create_labels(data_split='valid', output_to_html=5000, num_attn_files=1)
 create_labels(data_split='test', output_to_html=5000, num_attn_files=1)
