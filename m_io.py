@@ -249,12 +249,12 @@ def create_output_name(args):
     return 'batch_' + str(args.batch_size) + \
            '_e_' + str(args.epochs) + \
            '_m_len_' + str(args.sent_len) + \
-           '_bal_' + str(args.balance) + \
+           '_bal_' + str(args.balance).replace('.', '_') + \
            '_pre_' + str(args.bert_model) + \
-           '_lr_' + str(args.lr) + \
+           '_lr_' + str(args.lr).replace('.', '_') + \
            '_drop_' + str(args.dropout).replace('.', '_') + \
            '_op_' + str(args.optim) + \
-           '_weight_' + str(args.weights) + \
+           '_weight_' + str(args.weights).replace('.', '_') + \
            '_dpos_' + str(args.use_positional) + \
            '_lim_' + str(args.unchanged_limit)
 
