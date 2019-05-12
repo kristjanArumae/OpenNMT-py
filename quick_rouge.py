@@ -29,6 +29,6 @@ def run_rouge(data_split='valid', by=False, s='system_segm'):
 # output_path_system_segm = 'data.nosync/' + data_split + '/system_segm/'
 
 run_rouge()
-run_rouge(s='system_sent')
+# run_rouge(s='system_sent')
 run_rouge(data_split='test')
-run_rouge(data_split='test', s='system_sent')
+# run_rouge(data_split='test', s='system_sent')
