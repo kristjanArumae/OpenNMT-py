@@ -178,8 +178,8 @@ def train(model, loader_train, loader_valid, num_train_epochs=70, rouge_dict=Non
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
-    rouge_sys_sent_path = 'data.nosync/train/small_sys_sent_bert_large/'
-    rouge_sys_segs_path = 'data.nosync/train/small_sys_segs_bert_large/'
+    rouge_sys_sent_path = 'data.nosync/rouge_sent/' + ofp_fname + '/'
+    rouge_sys_segs_path = 'data.nosync/rouge_segs/' + ofp_fname + '/'
 
     if not os.path.exists(rouge_sys_sent_path):
         os.mkdir(rouge_sys_sent_path)
@@ -222,7 +222,7 @@ def train(model, loader_train, loader_valid, num_train_epochs=70, rouge_dict=Non
             acc_loss_s.append(loss_s.cpu().data.numpy())
             acc_loss_qa.append(loss_q.cpu().data.numpy())
 
-            if (step + 1) % 10 == 0:
+            if (step + 1) % 100 == 0:
                 loss_ls.append(np.mean(acc_loss))
                 loss_ls_s.append(np.mean(acc_loss_s))
                 loss_ls_qa.append(np.mean(acc_loss_qa))
@@ -307,7 +307,7 @@ if args.train:
 
     data_loader_train, num_train, _, _, _ = create_iterator(data_split='train',
                                                             max_len=sent_len,
-                                                            max_size=100000,
+                                                            max_size=50000,
                                                             batch_size=batch_size,
                                                             balance=args.balance,
                                                             bert_model=args.bert_model,

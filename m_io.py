@@ -250,7 +250,7 @@ def create_output_name(args):
            '_e_' + str(args.epochs) + \
            '_m_len_' + str(args.sent_len) + \
            '_bal_' + str(args.balance) + \
-           '_bert_' + str(args.bert_model) + \
+           '_pre_' + str(args.bert_model) + \
            '_lr_' + str(args.lr) + \
            '_drop_' + str(args.dropout).replace('.', '_') + \
            '_op_' + str(args.optim) + \
