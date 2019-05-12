@@ -30,3 +30,5 @@ def run_rouge(data_split='valid', by=False, s='system_segm'):
 
 run_rouge()
 run_rouge(s='system_sent')
+run_rouge(data_split='test')
+run_rouge(data_split='test', s='system_sent')
