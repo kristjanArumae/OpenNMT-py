@@ -307,14 +307,14 @@ if args.train:
 
     data_loader_train, num_train, _, _, _ = create_iterator(data_split='train',
                                                             max_len=sent_len,
-                                                            max_size=1000,
+                                                            max_size=100000,
                                                             batch_size=batch_size,
                                                             balance=args.balance,
                                                             bert_model=args.bert_model,
                                                             ofp_fname=ofp_fname)
     data_loader_valid, num_val, used_b_id, x_for_rouge, all_sent_align = create_iterator(data_split='valid',
                                                                                          max_len=sent_len,
-                                                                                         max_size=128,
+                                                                                         max_size=5000,
                                                                                          batch_size=batch_size,
                                                                                          balance=None,
                                                                                          bert_model=args.bert_model,
