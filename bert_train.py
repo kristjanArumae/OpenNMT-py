@@ -219,7 +219,7 @@ def train(model, loader_train, loader_valid, num_train_epochs=70, rouge_dict=Non
             acc_loss_s.append(loss_s.cpu().data.numpy())
             acc_loss_qa.append(loss_q.cpu().data.numpy())
 
-            if (step + 1) % 10 == 0:
+            if (step + 1) % 10000 == 0:
                 loss_ls.append(np.mean(acc_loss))
                 loss_ls_s.append(np.mean(acc_loss_s))
                 loss_ls_qa.append(np.mean(acc_loss_qa))
@@ -308,7 +308,7 @@ if args.train:
 
     data_loader_valid, num_val, used_b_id, x_for_rouge, all_sent_align = create_iterator(data_split='valid',
                                                                                          max_len=sent_len,
-                                                                                         max_size=64,
+                                                                                         max_size=-1,
                                                                                          batch_size=batch_size,
                                                                                          balance=None,
                                                                                          bert_model=args.bert_model,
@@ -316,7 +316,7 @@ if args.train:
 
     data_loader_train, num_train, _, _, _ = create_iterator(data_split='train',
                                                             max_len=sent_len,
-                                                            max_size=1000,
+                                                            max_size=-1,
                                                             batch_size=batch_size,
                                                             balance=args.balance,
                                                             bert_model=args.bert_model,
