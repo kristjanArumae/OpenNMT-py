@@ -2,10 +2,10 @@ from pyrouge import Rouge155
 import tempfile
 
 
-def run_rouge(data_split='train', by=False, s='small_sys_sent'):
+def run_rouge(data_split='valid', by=False, s='system_segm'):
     tempfile.tempdir = '/scratch/'
 
-    rouge_fname = 'data.nosync/' + data_split + '/small_model/'
+    rouge_fname = 'data.nosync/' + data_split + '/model/'
 
     if by:
         r = Rouge155(rouge_args='-e /home/kristjan/data1/softwares/rouge/ROUGE/RELEASE-1.5.5/data -c 95 -2 -1 -U -r 1000 -n 4 -w 1.2 -a -m -b 75')
@@ -18,7 +18,7 @@ def run_rouge(data_split='train', by=False, s='small_sys_sent'):
     r.system_filename_pattern = 's_(\d+).txt'
     r.model_filename_pattern = 'm_#ID#.txt'
 
-    fname = s + '_rouge.out'
+    fname = data_split + '_' + s + '_rouge.out'
     ofp = open(fname, 'w+')
 
     ofp.write(r.convert_and_evaluate())
@@ -29,4 +29,4 @@ def run_rouge(data_split='train', by=False, s='small_sys_sent'):
 # output_path_system_segm = 'data.nosync/' + data_split + '/system_segm/'
 
 run_rouge()
-run_rouge(s='small_sys_segs')
+run_rouge(s='system_sent')
