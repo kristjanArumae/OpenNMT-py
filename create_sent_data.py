@@ -11,6 +11,94 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 
+def create_heatmap2(src_list, tgt_list, attn_list, data_split='train', output_to_html=-1):
+
+    if output_to_html < 0:
+        return
+
+    ofp = open(data_split + '_readable_heatmap.html', 'w+')
+    ofp.write('<html>')
+    ofp.write('<script>\n'
+              'function hl(id){\n'
+              'document.getElementById(id).style.backgroundColor = "lightgreen";}\n'
+              'function un_hl(id){\n'
+              'document.getElementById(id).style.backgroundColor = "";}\n'
+              '</script>\n')
+    ofp.write('<body>')
+
+    doc_id = 0
+
+    assert len(tgt_list) == len(src_list)
+    for k, (a_ls, x_ls, y_ls) in enumerate(zip(attn_list, src_list, tgt_list)):
+        if k == output_to_html:
+            break
+
+        ofp.write('<p>')
+
+        most_used_idxs_map = get_most_used(a_ls, y_ls)
+
+        doc = ' '.join(x_ls).encode('utf-8')
+        sentences = sent_tokenize(doc)
+        token_idx = 0
+
+        for sent in sentences:
+
+            total_in_sent = 0
+            token_copy = token_idx
+            highlight_ls = []
+
+            for i, _ in enumerate(sent.split()):
+                if token_copy in most_used_idxs_map:
+                    total_in_sent += 1
+                    highlight_ls.append(1)
+                else:
+                    highlight_ls.append(0)
+
+                token_copy += 1
+
+            for word, hl, i in zip(sent.split(), highlight_ls, xrange(len(highlight_ls))):
+                if word == '<unk>':
+                    word = 'UNK'
+                if word == '<t>':
+                    word = 'T_BEGIN'
+                if word == '</t>':
+                    word = 'T_END'
+                if word == '<blank>':
+                    word = 'PADDING'
+
+                if token_idx in most_used_idxs_map:
+                    target_id = str(doc_id) + '_' + str(most_used_idxs_map[token_idx])
+                    ofp.write('<span class="tag" style="background-color: rgba(255, 0, 0, 0.7);" onmouseover=hl("' + target_id + '") onmouseout=un_hl("' + target_id + '")>' + word + ' </span > ')
+                else:
+                    ofp.write('<span class="tag">' + word + ' </span > ')
+
+                token_idx += 1
+            ofp.write('</br>')
+
+        ofp.write('</br>')
+
+        for i, item in enumerate(y_ls):
+            if item == '<unk>':
+                item = 'UNK'
+            if item == '<t>':
+                item = 'T_BEGIN'
+            if item == '</s>':
+                item = 'S_END'
+            if item == '</t>':
+                item = 'T_END'
+            if item == '<blank>':
+                continue
+
+            target_id = str(doc_id) + '_' + str(i)
+            ofp.write('<span id="'+target_id+'">' + item + ' </span > ')
+
+        ofp.write('</p>')
+        doc_id += 1
+
+
+    ofp.write('<html><body>')
+    ofp.close()
+
 def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
     ifp_v = open('vocab.json', 'rb')
 
@@ -18,6 +106,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
 
     src_list = []
     tgt_list = []
+    tgt_list_raw = []
     attn_list = []
     src_list_raw = []
     len_ls = []
@@ -44,9 +133,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
 
     data = {'x': [], 'x_o': [], 'y': [], 's_id': [], 'batch_id': [], 'rouge': dict()}
 
-    print 'loading openNMT output'
     for i in xrange(num_attn_files):
-        print 'file', i + 1
 
         ifp_model = open('stanford_attn_' + data_split + str(i), 'rb')
         ifp_data = np.load(ifp_model)
@@ -58,38 +145,39 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
             batch_idx_sample = sample[3]
 
             src_ls_raw = [vocab_map[str(x)] for x in src_ls_sample]
+            tgt_ls_raw = [vocab_map[str(y)] for y in tgt_ls_sample][1:]
 
             src_list.append(src_ls_sample)
             tgt_list.append(tgt_ls_sample)
             attn_list.append(attn_ls_sample)
             src_list_raw.append(src_ls_raw)
+            tgt_list_raw.append(tgt_ls_raw)
             batch_idx.append(batch_idx_sample)
 
         ifp_model.close()
+
+    create_heatmap2(src_list_raw, tgt_list_raw, attn_list, data_split, output_to_html)
+
 
     ifp_hl = io.open("data.nosync/" + data_split + ".txt.tgt", mode="r", encoding="utf-8")
     ifp_orig = io.open("data.nosync/" + data_split + ".txt.src", mode="r", encoding="utf-8")
 
     x_orig, y_orig = dict(), dict()
 
-    print 'loading x_orig'
     for i, line_x in enumerate(ifp_orig):
         x_orig[i] = line_x.rstrip()
 
-    print 'loading y_orig'
     for i, line_y in enumerate(ifp_hl):
         y_orig[i] = line_y.rstrip()
 
     ifp_orig.close()
     ifp_hl.close()
 
-    print len(tgt_list), len(src_list)
-
     total_d = len(src_list)
     rouge_counter = 0
     total_unused = 0
 
-    num_sent_used, num_w_used = [], []
+    num_sent_used, num_w_used, compression_ratio = [], [], []
     used_art = set()
 
     for k, (a_ls, x_ls,  x_ls_r, y_ls, b_id) in enumerate(zip(attn_list, src_list, src_list_raw, tgt_list, batch_idx)):
@@ -159,7 +247,7 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
             sentence_label = total_in_sent >= 3 and longest_span[1] - longest_span[0] + 1 > 5
 
             single_y = [int(sentence_label)]
-
+            sentence_length = len(s_split_orig)
             if k < output_to_html:
                 onmt_str, orig_str, all_attn_str = [], [], []
 
@@ -198,8 +286,11 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
             if sentence_label:
                 single_y.append(longest_span[0])
                 single_y.append(longest_span[1])
+                span_len = longest_span[1] - longest_span[0]
 
-                num_used_w += longest_span[1] - longest_span[0]
+                compression_ratio.append(span_len / float(sentence_length))
+
+                num_used_w += span_len
 
                 if data_split != 'train':
                     ofp_sys_sent.write(sent_o.encode('utf-8') + ' ')
@@ -242,9 +333,11 @@ def create_labels(data_split='train', output_to_html=-1, num_attn_files=1):
     if ofp_html is not None:
         ofp_html.close()
 
+    print data_split
     print num_pos/float(len(data['y']) + 1.0), len(data['y']), len(data['x']), total_unused
     print np.median(len_ls), np.mean(len_ls)
     print 'sent used', np.mean(num_sent_used), 'w used', np.mean(num_w_used)
+    print 'comp ratio', np.mean(compression_ratio), '\n'
 
 
 def reverse_batch(x, batch_idx_ls):
@@ -284,7 +377,6 @@ def combine_chunks(highlight_ls_):
     longest_span = (None, None)
     distance_from_hl = 0
     is_begin = True
-    cur_len = 0
 
     highlight_ls = copy.copy(highlight_ls_)
 
@@ -326,4 +418,6 @@ def combine_chunks(highlight_ls_):
     return highlight_ls, longest_span
 
 
-create_labels(output_to_html=1000)
+create_labels(data_split='train', output_to_html=5000, num_attn_files=5)
+create_labels(data_split='valid', output_to_html=5000, num_attn_files=1)
+create_labels(data_split='test', output_to_html=5000, num_attn_files=1)
