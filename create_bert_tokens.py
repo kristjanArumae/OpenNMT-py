@@ -143,11 +143,11 @@ def tokenize_data(data_split='train', output_to_html=-1, small_subset=-1, balanc
 
 
 tokenize_data(data_split='train', output_to_html=10000, small_subset=-1, balance=None, bert_model='bert-large-uncased')
-tokenize_data(data_split='train', output_to_html=10000, small_subset=-1, balance=0.2, bert_model='bert-large-uncased')
+tokenize_data(data_split='train', output_to_html=10000, small_subset=-1, balance=0.33, bert_model='bert-large-uncased')
 tokenize_data(data_split='valid', output_to_html=10000, small_subset=-1, balance=None, bert_model='bert-large-uncased')
 tokenize_data(data_split='test', output_to_html=10000, small_subset=-1, balance=None, bert_model='bert-large-uncased')
 
 tokenize_data(data_split='train', output_to_html=10000, small_subset=-1, balance=None, bert_model='bert-base-uncased')
-tokenize_data(data_split='train', output_to_html=10000, small_subset=-1, balance=0.2, bert_model='bert-base-uncased')
+tokenize_data(data_split='train', output_to_html=10000, small_subset=-1, balance=0.33, bert_model='bert-base-uncased')
 tokenize_data(data_split='valid', output_to_html=10000, small_subset=-1, balance=None, bert_model='bert-base-uncased')
 tokenize_data(data_split='test', output_to_html=10000, small_subset=-1, balance=None, bert_model='bert-base-uncased')
