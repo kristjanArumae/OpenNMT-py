@@ -385,7 +385,7 @@ def combine_chunks(highlight_ls_):
             if is_begin and 0 < distance_from_hl < 5:
                 for j in range(0, i):
                     highlight_ls[j] = 1
-            elif 0 < distance_from_hl < 5:
+            elif 0 < distance_from_hl <= 5:
                 for j in range(i - distance_from_hl, i):
                     highlight_ls[j] = 1
 
@@ -418,6 +418,6 @@ def combine_chunks(highlight_ls_):
     return highlight_ls, longest_span
 
 
-# create_labels(data_split='train', output_to_html=5000, num_attn_files=5)
+create_labels(data_split='train', output_to_html=5000, num_attn_files=5)
 create_labels(data_split='valid', output_to_html=5000, num_attn_files=1)
 create_labels(data_split='test', output_to_html=5000, num_attn_files=1)
